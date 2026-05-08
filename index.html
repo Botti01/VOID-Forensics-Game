@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="V.O.I.D. — A serious game for memory forensics education. Simulate live incident response against active ransomware.">
+  <title>V.O.I.D. — Volatile Output Investigation & Discovery</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ═══════════ START MENU ═══════════ -->
+    <div id="start-menu">
+      <div class="menu-container">
+        <div class="menu-logo">
+          <pre class="ascii-art">
+ ██╗   ██╗ ██████╗ ██╗██████╗ 
+ ██║   ██║██╔═══██╗██║██╔══██╗
+ ██║   ██║██║   ██║██║██║  ██║
+ ╚██╗ ██╔╝██║   ██║██║██║  ██║
+  ╚████╔╝ ╚██████╔╝██║██████╔╝
+   ╚═══╝   ╚═════╝ ╚═╝╚═════╝ 
+          </pre>
+          <p class="menu-subtitle">Volatile Output Investigation & Discovery</p>
+          <p class="menu-tagline">A Memory Forensics Serious Game</p>
+        </div>
+
+        <div class="menu-form">
+          <div class="menu-field">
+            <label for="player-name" class="menu-label">ANALYST CALLSIGN</label>
+            <input type="text" id="player-name" class="menu-input" placeholder="Enter your name..." autocomplete="off" autofocus maxlength="20">
+          </div>
+
+          <div class="menu-field">
+            <label class="menu-label">TARGET OPERATING SYSTEM</label>
+            <div class="os-selector">
+              <button class="os-btn selected" data-os="linux" id="btn-linux">
+                <span class="os-icon">🐧</span>
+                <span class="os-name">Linux</span>
+                <span class="os-detail">Ubuntu Server 22.04</span>
+              </button>
+              <button class="os-btn" data-os="windows" id="btn-windows">
+                <span class="os-icon">🪟</span>
+                <span class="os-name">Windows</span>
+                <span class="os-detail">Windows Server 2019</span>
+              </button>
+            </div>
+          </div>
+
+          <button id="btn-start" class="start-btn" disabled>
+            <span class="start-btn-text">▶ BEGIN INVESTIGATION</span>
+          </button>
+
+          <p class="menu-hint">You have <strong>10 minutes</strong> to find and stop the ransomware.</p>
+        </div>
+
+        <div class="menu-footer">
+          <p>Computer Forensics — Prof. Atzeni — Politecnico di Torino</p>
+          <p>Developed by Andrea Botticella (s347291)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ GAME VIEW (hidden initially) ═══════════ -->
+    <div id="game-view" class="hidden">
+
+      <!-- HUD Bar -->
+      <div id="hud">
+        <div class="hud-section">
+          <span id="hud-title" title="Return to menu">V.O.I.D.</span>
+        </div>
+        <div class="hud-section">
+          <span class="hud-label">Analyst</span>
+          <span class="hud-value" id="hud-analyst">—</span>
+        </div>
+        <div class="hud-section">
+          <span class="hud-label">Time</span>
+          <span class="hud-value" id="hud-timer">10:00</span>
+        </div>
+        <div class="hud-section">
+          <span class="hud-label">Encryption</span>
+          <div class="hud-bar-container">
+            <div class="hud-bar-fill" id="hud-encryption-bar"></div>
+          </div>
+          <span class="hud-value" id="hud-encryption" style="color: var(--text-red);">0%</span>
+        </div>
+        <div class="hud-section">
+          <span class="hud-label">Score</span>
+          <span class="hud-value" id="hud-score">0</span>
+        </div>
+      </div>
+
+      <!-- Game Body: Terminal + Learning Panel -->
+      <div id="game-body">
+
+        <!-- Terminal -->
+        <div id="terminal">
+          <div id="terminal-output"></div>
+          <div id="terminal-input-line">
+            <span id="terminal-prompt">void@server:~$</span>
+            <input type="text" id="terminal-input" autocomplete="off" spellcheck="false" placeholder="Type a command...">
+          </div>
+        </div>
+
+        <!-- Learning Panel (right sidebar) -->
+        <div id="learning-panel">
+          <div class="panel-header">
+            <span class="panel-title">📘 Forensic Notes</span>
+            <button class="panel-close-btn" id="panel-close-btn" title="Collapse panel">◀</button>
+          </div>
+          <div class="panel-content" id="learning-content">
+            <p class="panel-empty">No forensic insights discovered yet.<br><br>Investigate the system to unlock educational notes about memory forensics techniques.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Learning Panel Toggle (visible when panel is collapsed) -->
+      <button id="learning-toggle" title="Open Forensic Notes">
+        📘 NOTES <span class="toggle-badge" id="learning-badge">0</span>
+      </button>
+
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
+
