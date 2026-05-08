@@ -1,45 +1,79 @@
-# V.O.I.D. (Volatile Output Investigation & Discovery)
+# V.O.I.D. — Volatile Output Investigation & Discovery
 
 <p align="center">
-  <em>Un "Serious Game" per la didattica della Computer Forensics, incentrato sull'analisi della memoria RAM (Memory Forensics).</em>
+  <em>A Serious Game for Computer Forensics education, focused on Memory Forensics and Live Incident Response.</em>
 </p>
 
-## 🔎 Concept del Gioco: Live Target
-V.O.I.D. è un simulatore di **Live Incident Response** basato puramente su Command-Line Interface (CLI) web, focalizzato al 100% sull'interazione iperrealistica dal terminale senza distrazioni grafiche 3D.
-Mette il giocatore nei panni di un SOC Analyst alle prese con un attacco ransomware *attualmente in corso* su un server aziendale.
+## 🔎 Game Concept
 
-La macchina non può essere spenta o le chiavi in memoria andranno perse (Order of Volatility). Il giocatore accede tramite un terminale remoto (o una console locale simulata) con tool di analisi della memoria.
-Il fattore differenziante è **la corsa contro il tempo**: messaggi di sistema allerteranno periodicamente il giocatore sull'avanzamento distruttivo del malware, forzando un'analisi forense metodica ma fulminea.
+V.O.I.D. is a browser-based **Live Incident Response simulator** built entirely with a Command-Line Interface (CLI). It puts the player in the role of a SOC Analyst responding to an **active ransomware attack** on a corporate server.
 
-**Obiettivo:** Isolare la catena di infezione, scovare il processo iniettato (es. tramite *Process Hollowing*), trovare in memoria la chiave d'innesco AES ed estirpare il processo nocivo (`kill`) bloccando l'emorragia di dati.
+The machine cannot be shut down — critical decryption keys exist **only in volatile memory** (RAM). The player must race against the clock, using forensic analysis tools to identify the malicious process, extract the AES encryption key from its memory, and terminate the ransomware before all corporate data is encrypted.
 
-## 🎯 Obiettivi Didattici (Learning Outcomes)
-Progetto per "Computer Forensics and Cyber Crime Analysis" (Prof. Atzeni):
-- **Live Response sotto Stress:** Simulare l'indagine a caldo durante un incidente ad alto impatto. Non c'è tempo per imaging tradizionale (dump totale), l'operatore deve applicare memory triage live.
-- **Order of Volatility Pratico:** Capire la crucialità di mantenere l'host acceso e il grave rischio di perdita chiavi.
-- **Identificazione Catene Malware:** Comprendere le correlazioni tra connessioni anomale e Parent/Child PID per risalire al dropper o loader originale.
-- **Analisi Memoria Interattiva:** Applicare tool stile Volatility o Sysinternals (`pstree`, `malfind`, `yarascan`) su output che mutano rispetto ai classici dump statici.
+### Key Features
+- **Dual OS Scenarios** — Choose between a Linux (Ubuntu Server) or Windows (Windows Server 2019) investigation, each with a completely different attack chain
+- **Real-Time Pressure** — A countdown timer and live encryption progress create authentic incident response stress
+- **Dynamic State Engine** — Process trees, network connections, and memory regions are mutable. Killing a process permanently removes it and its data from the system
+- **Forensic Report & Scoring** — At game end, a detailed investigation report evaluates methodology, penalizes mistakes, and provides educational feedback
+- **Order of Volatility as Core Mechanic** — Killing the ransomware before extracting the key means the key is lost forever
 
-## ⚙️ Meccaniche di Gioco Estreme
-A differenza delle normali analisi forensi statiche post-mortem, V.O.I.D. utilizza uno **stato dinamico JSON**.
-Al centro del game loop vi è un terminale interattivo che evolve nel tempo.
+## 🎯 Learning Outcomes
 
-1. **Gestione del Panico (Game Loop):** Il terminale muta; i log delle operazioni di cifratura appaiono in background forzando ritmi incalzanti.
-2. **Ricognizione Gerarchica (`pstree`):** Scrutare l'albero processi (non solo una piatta lista) per capire dove un rootkit o loader si nasconde.
-3. **Triage Veloce (`netscan`, `malfind`):** Filtrare connessioni malevole e regioni di memoria RWX introdotte dinamicamente.
-4. **Estrazione e Chirurgia (`yarascan`, `memdump <pid>`, `kill <pid>`):** Estrarre sezioni di memoria per stringhe sospette (chiavi AES), e fermare proattivamente il malware operando sulla RAM.
+This project was developed as a supplementary activity (Serious Game) for the course "Computer Forensics and Cyber Crime Analysis" (Prof. Atzeni, Politecnico di Torino).
 
-## 💻 Architettura e Tecnologie
-Il gioco è progettato per girare interamente lato client (nel browser) in modo da essere facilmente distribuito, senza necessità di macchine virtuali o backend pesanti:
-- **Frontend:** HTML5, CSS Vanilla (tema terminale "cyberpunk/hacker") e Javascript puro.
-- **Motore Dati:** Nessun motore gestionale complesso; lo scenario risiede in un grafo/struttura JSON statica (che mappa i processi ei loro attributi), manipolata progressivamente dallo stato di avanzamento del giocatore.
-- **Impiego di AI Generativa:** Come concordato, l'impalcatura tecnica, la GUI del terminale e i parser dei comandi sono generati utilizzando AI Generative, assicurando che lo sforzo e l'attenzione dello sviluppatore (lo studente) siano posti rigorosamente sul contenuto educativo e il flow forense, piuttosto che sulle complicazioni di programmazione web.
+- **Live Response Under Stress** — Perform memory triage during an active high-impact incident
+- **Order of Volatility** — Understand why volatile evidence must be captured before remediation
+- **Malware Chain Identification** — Trace parent-child PID relationships to find the attack origin
+- **Memory Analysis** — Apply Volatility-style tools (`pstree`, `malfind`, `yarascan`, `memdump`) on dynamic outputs
+- **Evidence-First Methodology** — Learn that remediation without evidence preservation leads to data loss
 
-## 📜 Vincoli di Progetto Approvati
-In accordo con le regole stabilite dal docente:
-- **Individuale:** Completamente sviluppato in autonomia.
-- **Originalità:** V.O.I.D. offre un'esperienza distinta che non copia materiale già esistente o presente in altri tool didattici (come *CyberForensics-Arena*), focalizzandosi intimamente sull'interazione realistica da riga di comando per l'analisi volatile.
+## 💻 Architecture & Technologies
+
+The game runs entirely client-side in the browser — no backend, no VM, no installation:
+
+- **Frontend:** HTML5, Vanilla CSS (cyberpunk terminal theme), vanilla JavaScript (ES6 modules)
+- **Data Engine:** Scenario state stored as mutable JSON, manipulated by player actions in real-time
+- **Audio:** Synthetic sound effects via Web Audio API (no external files)
+- **AI-Assisted Development:** As approved by the professor, the technical scaffolding (terminal UI, command parser, game loop) was developed with AI assistance, allowing the author to focus on forensic accuracy and educational content design
+
+## 🚀 Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/Botti01/VOID-Forensics-Game.git
+cd VOID-Forensics-Game
+
+# Option 1: Just open index.html in your browser
+# Option 2: Start a local server (recommended)
+python3 -m http.server 8080
+# Then open http://localhost:8080
+```
+
+See [TUTORIAL.md](TUTORIAL.md) for a detailed gameplay guide and command reference.
+
+## 📁 Project Structure
+
+```
+VOID-Forensics-Game/
+├── index.html                  # Entry point (start menu + game)
+├── css/style.css               # Cyberpunk terminal theme
+├── js/
+│   ├── main.js                 # Bootstrap, menu logic, HUD
+│   ├── terminal.js             # Terminal UI renderer
+│   ├── parser.js               # Command tokenizer & dispatcher
+│   ├── commands.js             # 16 forensic command implementations
+│   ├── gameState.js            # Central mutable game state
+│   ├── scenario.js             # Scenario selector (Linux/Windows)
+│   ├── scenarios/
+│   │   ├── linux.js            # Ubuntu Server attack scenario
+│   │   └── windows.js          # Windows Server attack scenario
+│   ├── gameLoop.js             # Timer & encryption progression
+│   ├── scoring.js              # Score tracking & forensic report
+│   └── audio.js                # Synthetic sound effects
+├── TUTORIAL.md                 # How to play guide
+└── README.md                   # This file
+```
 
 ---
 
-*Progetto didattico realizzato da Andrea Botticella (s347291).*
+*Educational project by Andrea Botticella (s347291) — Politecnico di Torino, 2024/2025.*
