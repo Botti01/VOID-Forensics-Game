@@ -26,13 +26,15 @@ export function removeScore(points) {
 /**
  * Calculate final rank based on score.
  */
-function getRank(score) {
-  if (score >= 900) return { rank: 'S', title: 'Expert Forensic Analyst', stars: '★★★★★' };
-  if (score >= 750) return { rank: 'A', title: 'Senior SOC Analyst', stars: '★★★★☆' };
-  if (score >= 600) return { rank: 'B', title: 'SOC Analyst', stars: '★★★☆☆' };
-  if (score >= 400) return { rank: 'C', title: 'Junior Analyst', stars: '★★☆☆☆' };
-  return { rank: 'D', title: 'Trainee', stars: '★☆☆☆☆' };
+export function getRank(score) {
+  if (score >= 900) return { rank: 'S', label: 'Expert ★★★★★', title: 'Expert Forensic Analyst', stars: '★★★★★' };
+  if (score >= 750) return { rank: 'A', label: 'Senior ★★★★☆', title: 'Senior SOC Analyst', stars: '★★★★☆' };
+  if (score >= 600) return { rank: 'B', label: 'Analyst ★★★☆☆', title: 'SOC Analyst', stars: '★★★☆☆' };
+  if (score >= 400) return { rank: 'C', label: 'Junior ★★☆☆☆', title: 'Junior Analyst', stars: '★★☆☆☆' };
+  return { rank: 'D', label: 'Trainee ★☆☆☆☆', title: 'Trainee', stars: '★☆☆☆☆' };
 }
+
+export function resetScoring() { scoreLog.length = 0; }
 
 /**
  * Generate and print the full forensic investigation report.

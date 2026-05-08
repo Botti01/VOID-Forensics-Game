@@ -7,6 +7,11 @@ import { parseCommand } from './parser.js';
 import { bindClear } from './commands.js';
 import { startGameLoop, stopGameLoop } from './gameLoop.js';
 import { playKeyClick } from './audio.js';
+import { getLessonCount, resetLessons } from './learning.js';
+import { getRank, resetScoring } from './scoring.js';
+
+// Session leaderboard (persists in same tab)
+const sessionLeaderboard = [];
 
 let selectedOS = 'linux';
 let playerName = '';
@@ -41,25 +46,68 @@ function setupMenu() {
 }
 
 function launchGame() {
+  // Hide all views, show game
   document.getElementById('start-menu').classList.add('hidden');
+  document.getElementById('results-page').classList.add('hidden');
   document.getElementById('game-view').classList.remove('hidden');
+
+  // Reset for new game
+  resetLessons();
+  resetScoring();
 
   const scenario = getScenario(selectedOS);
   initState(scenario);
   gameState.playerName = playerName;
 
+  // Prompt & HUD
   const serverName = scenario.meta.target.toLowerCase();
   document.getElementById('terminal-prompt').textContent = `${playerName.toLowerCase()}@${serverName}:~$ `;
   document.getElementById('hud-analyst').textContent = playerName;
+  document.getElementById('hud-timer').textContent = '10:00';
+  document.getElementById('hud-timer').className = 'hud-value';
+  document.getElementById('hud-encryption').textContent = '0%';
+  document.getElementById('hud-encryption-bar').style.width = '0%';
+  document.getElementById('hud-encryption-bar').className = 'hud-bar-fill';
+  document.getElementById('hud-score').textContent = '0';
 
+  // Clear terminal & panel
+  document.getElementById('terminal-output').innerHTML = '';
+  const lc = document.getElementById('learning-content');
+  if (lc) lc.innerHTML = '<p class="panel-empty">No forensic insights discovered yet.<br><br>Investigate the system to unlock educational notes.</p>';
+  const badge = document.getElementById('learning-badge');
+  if (badge) badge.textContent = '0';
+
+  // Ensure panel visible
+  document.getElementById('learning-panel').classList.remove('collapsed');
+  document.getElementById('learning-toggle').classList.remove('visible');
+
+  // Clean up stale UI
+  document.querySelectorAll('.lesson-toast, .toast-backdrop, .continue-btn-wrapper').forEach(el => el.remove());
+
+  // Re-enable input
+  const termInput = document.getElementById('terminal-input');
+  termInput.disabled = false;
+  termInput.placeholder = 'Type a command...';
+
+  // Bind
   initTerminal(handleCommand);
   bindClear(clearTerminal);
 
-  document.getElementById('terminal-input').addEventListener('keydown', (e) => {
+  // Key clicks (clone to avoid duplicate listeners)
+  const newInput = termInput.cloneNode(true);
+  termInput.parentNode.replaceChild(newInput, termInput);
+  newInput.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== 'ArrowUp' && e.key !== 'ArrowDown') playKeyClick();
   });
+  // Re-bind terminal to new input
+  initTerminal(handleCommand);
 
-  document.getElementById('hud-title').addEventListener('click', returnToMenu);
+  // VOID logo → menu
+  const hudTitle = document.getElementById('hud-title');
+  const newTitle = hudTitle.cloneNode(true);
+  hudTitle.parentNode.replaceChild(newTitle, hudTitle);
+  newTitle.addEventListener('click', returnToMenu);
+
   setupLearningPanel();
   startIntroSequence(scenario);
 }
@@ -71,9 +119,9 @@ function returnToMenu() {
   stopGameLoop();
   gameState.gamePhase = 'loading';
   document.getElementById('game-view').classList.add('hidden');
+  document.getElementById('results-page').classList.add('hidden');
   document.getElementById('start-menu').classList.remove('hidden');
-  document.getElementById('terminal-output').innerHTML = '';
-  document.querySelectorAll('.lesson-toast').forEach(t => t.remove());
+  document.querySelectorAll('.lesson-toast, .toast-backdrop').forEach(t => t.remove());
   document.getElementById('player-name').focus();
 }
 
@@ -82,32 +130,34 @@ function setupLearningPanel() {
   const closeBtn = document.getElementById('panel-close-btn');
   const toggleBtn = document.getElementById('learning-toggle');
 
-  closeBtn.addEventListener('click', () => {
-    panel.classList.add('collapsed');
-    toggleBtn.classList.add('visible');
-  });
+  const nc = closeBtn.cloneNode(true);
+  closeBtn.parentNode.replaceChild(nc, closeBtn);
+  const nt = toggleBtn.cloneNode(true);
+  toggleBtn.parentNode.replaceChild(nt, toggleBtn);
 
-  toggleBtn.addEventListener('click', () => {
+  nc.addEventListener('click', () => {
+    panel.classList.add('collapsed');
+    nt.classList.add('visible');
+  });
+  nt.addEventListener('click', () => {
     panel.classList.remove('collapsed');
-    toggleBtn.classList.remove('visible');
+    nt.classList.remove('visible');
   });
 }
 
 async function startIntroSequence(scenario) {
-  const bootLines = [
+  await printIntro([
     `[SYSTEM] Forensic Analysis Interface v2.6.1`,
     `[SYSTEM] Analyst: ${playerName}`,
     `[SYSTEM] Target OS: ${scenario.meta.os}`,
     `[SYSTEM] Establishing secure connection to ${scenario.meta.target}...`,
     `[SYSTEM] Connection established.`,
     "",
-  ];
-
-  await printIntro(bootLines, () => {});
+  ], () => {});
 
   await printIntro(scenario.meta.briefing, () => {
     gameState.gamePhase = 'playing';
-    startGameLoop(updateHUD);
+    startGameLoop(updateHUD, onGameOver);
     updateHUD();
     const input = document.getElementById('terminal-input');
     if (input) input.focus();
@@ -116,32 +166,121 @@ async function startIntroSequence(scenario) {
 
 function handleCommand(raw) {
   parseCommand(raw);
-  if (gameState.gamePhase === 'won') {
+  if (gameState.gamePhase === 'won' || gameState.gamePhase === 'lost') {
     stopGameLoop();
     updateHUD();
+    showEndGameUI();
   }
 }
 
-function updateHUD() {
-  const timerEl = document.getElementById('hud-timer');
-  const encryptEl = document.getElementById('hud-encryption');
-  const encryptBar = document.getElementById('hud-encryption-bar');
-  const scoreEl = document.getElementById('hud-score');
+function onGameOver() {
+  updateHUD();
+  showEndGameUI();
+}
 
-  if (timerEl) {
-    const m = Math.floor(gameState.timeRemaining / 60);
-    const s = gameState.timeRemaining % 60;
-    timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    timerEl.classList.remove('critical', 'warning');
-    if (gameState.timeRemaining <= 60) timerEl.classList.add('critical');
-    else if (gameState.timeRemaining <= 120) timerEl.classList.add('warning');
+function showEndGameUI() {
+  const termInput = document.getElementById('terminal-input');
+  if (termInput) {
+    termInput.disabled = true;
+    termInput.placeholder = 'Investigation complete.';
   }
-  if (encryptEl) encryptEl.textContent = `${gameState.encryptionProgress}%`;
-  if (encryptBar) {
-    encryptBar.style.width = `${gameState.encryptionProgress}%`;
-    encryptBar.classList.remove('critical', 'danger');
-    if (gameState.encryptionProgress > 75) encryptBar.classList.add('critical');
-    else if (gameState.encryptionProgress > 50) encryptBar.classList.add('danger');
+
+  // Remove existing continue buttons
+  document.querySelectorAll('.continue-btn-wrapper').forEach(el => el.remove());
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'continue-btn-wrapper';
+  const btn = document.createElement('button');
+  btn.className = 'continue-btn';
+  btn.textContent = '▶ CONTINUE TO RESULTS';
+  btn.addEventListener('click', showResultsPage);
+  wrapper.appendChild(btn);
+
+  const output = document.getElementById('terminal-output');
+  output.appendChild(wrapper);
+  output.scrollTop = output.scrollHeight;
+}
+
+function showResultsPage() {
+  const elapsed = gameState.totalTime - gameState.timeRemaining;
+
+  // Save to session leaderboard
+  const entry = {
+    name: gameState.playerName,
+    os: gameState.scenarioMeta?.osType === 'windows' ? 'Windows' : 'Linux',
+    score: gameState.score,
+    outcome: gameState.gamePhase === 'won' ? 'WIN' : 'LOSS',
+    time: fmtTime(elapsed),
+    ts: Date.now(),
+  };
+  sessionLeaderboard.push(entry);
+  sessionLeaderboard.sort((a, b) => b.score - a.score);
+
+  // Switch views
+  document.getElementById('game-view').classList.add('hidden');
+  document.getElementById('results-page').classList.remove('hidden');
+
+  // Populate stats
+  const rank = getRank(gameState.score);
+  document.getElementById('results-score').textContent = gameState.score;
+  document.getElementById('results-rank').textContent = rank.label;
+  document.getElementById('results-time').textContent = fmtTime(elapsed);
+  document.getElementById('results-commands').textContent = gameState.commandCount;
+  document.getElementById('results-encryption').textContent = `${gameState.encryptionProgress}%`;
+  document.getElementById('results-lessons').textContent = getLessonCount();
+
+  // Outcome
+  const oel = document.getElementById('results-outcome');
+  if (gameState.gamePhase === 'won') {
+    oel.textContent = '★ MISSION SUCCESSFUL — Ransomware Neutralized';
+    oel.className = 'results-outcome win';
+  } else {
+    oel.textContent = '✗ MISSION FAILED';
+    oel.className = 'results-outcome loss';
   }
-  if (scoreEl) scoreEl.textContent = gameState.score;
+
+  // Leaderboard
+  const tbody = document.getElementById('leaderboard-body');
+  tbody.innerHTML = '';
+  sessionLeaderboard.forEach((e, i) => {
+    const tr = document.createElement('tr');
+    if (e.ts === entry.ts) tr.className = 'current';
+    tr.innerHTML = `<td class="rank-col">${i + 1}</td><td>${e.name}</td><td>${e.os}</td><td>${e.outcome}</td><td class="score-col">${e.score}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Wire buttons (clone to avoid duplicate listeners)
+  const rb = document.getElementById('btn-replay');
+  const mb = document.getElementById('btn-back-menu');
+  const nrb = rb.cloneNode(true);
+  rb.parentNode.replaceChild(nrb, rb);
+  const nmb = mb.cloneNode(true);
+  mb.parentNode.replaceChild(nmb, mb);
+  nrb.addEventListener('click', () => launchGame());
+  nmb.addEventListener('click', () => returnToMenu());
+}
+
+function updateHUD() {
+  const te = document.getElementById('hud-timer');
+  const ee = document.getElementById('hud-encryption');
+  const eb = document.getElementById('hud-encryption-bar');
+  const se = document.getElementById('hud-score');
+  if (te) {
+    te.textContent = fmtTime(gameState.timeRemaining);
+    te.classList.remove('critical', 'warning');
+    if (gameState.timeRemaining <= 60) te.classList.add('critical');
+    else if (gameState.timeRemaining <= 120) te.classList.add('warning');
+  }
+  if (ee) ee.textContent = `${gameState.encryptionProgress}%`;
+  if (eb) {
+    eb.style.width = `${gameState.encryptionProgress}%`;
+    eb.classList.remove('critical', 'danger');
+    if (gameState.encryptionProgress > 75) eb.classList.add('critical');
+    else if (gameState.encryptionProgress > 50) eb.classList.add('danger');
+  }
+  if (se) se.textContent = gameState.score;
+}
+
+function fmtTime(s) {
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }

@@ -549,25 +549,27 @@ body::after {
   top: 50%;
   transform: translateY(-50%);
   background: var(--bg-panel);
-  border: 1px solid #1a2a3a;
+  border: 1px solid var(--accent-cyan);
   border-right: none;
-  border-radius: 6px 0 0 6px;
+  border-radius: 8px 0 0 8px;
   color: var(--text-cyan);
   cursor: pointer;
-  padding: 12px 8px;
+  padding: 16px 12px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 700;
   writing-mode: vertical-rl;
   text-orientation: mixed;
   letter-spacing: 2px;
   z-index: 200;
   transition: all 0.3s;
   display: none;
+  box-shadow: -2px 0 12px rgba(0, 229, 255, 0.1);
 }
 
 #learning-toggle:hover {
-  background: rgba(0, 229, 255, 0.08);
-  box-shadow: var(--glow-cyan);
+  background: rgba(0, 229, 255, 0.1);
+  box-shadow: -2px 0 20px rgba(0, 229, 255, 0.2), var(--glow-cyan);
 }
 
 #learning-toggle.visible {
@@ -587,33 +589,42 @@ body::after {
 }
 
 /* ============================================================
-   LESSON TOAST (pop-up notification)
+   LESSON TOAST (centered pop-up with backdrop)
    ============================================================ */
+.toast-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 499;
+}
+
 .lesson-toast {
   position: fixed;
-  top: 60px;
-  right: 20px;
-  width: 360px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  max-width: 90vw;
   background: var(--bg-panel);
   border: 1px solid var(--accent-cyan);
   border-left: 4px solid var(--accent-cyan);
-  border-radius: 6px;
-  padding: 16px 20px;
-  box-shadow: 0 4px 20px rgba(0, 229, 255, 0.15), var(--glow-cyan);
+  border-radius: 8px;
+  padding: 24px 28px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 229, 255, 0.15);
   z-index: 500;
-  animation: toastIn 0.5s ease;
+  animation: toastIn 0.4s ease;
 }
 
 .lesson-toast .toast-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .lesson-toast .toast-label {
   color: var(--accent-cyan);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -649,6 +660,195 @@ body::after {
 }
 
 /* ============================================================
+   CONTINUE BUTTON (end-game)
+   ============================================================ */
+.continue-btn-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 8px 0;
+}
+
+.continue-btn {
+  padding: 12px 40px;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(0, 255, 136, 0.1));
+  border: 2px solid var(--accent-cyan);
+  border-radius: 6px;
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.continue-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.25), rgba(0, 255, 136, 0.15));
+  box-shadow: 0 0 25px rgba(0, 229, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+/* ============================================================
+   RESULTS PAGE
+   ============================================================ */
+#results-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100vw;
+  background: var(--bg-primary);
+  overflow-y: auto;
+}
+
+.results-container {
+  text-align: center;
+  max-width: 700px;
+  width: 90%;
+  padding: 40px 0;
+  animation: fadeIn 0.6s ease;
+}
+
+.results-title {
+  color: var(--accent-cyan);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+}
+
+.results-outcome {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.results-outcome.win { color: var(--accent-green); }
+.results-outcome.loss { color: var(--text-red); }
+
+.results-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: var(--bg-secondary);
+  border: 1px solid #1a2a3a;
+  border-radius: 6px;
+  padding: 16px 12px;
+}
+
+.stat-label {
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-cyan);
+}
+
+.stat-value.green { color: var(--accent-green); }
+.stat-value.red { color: var(--text-red); }
+.stat-value.yellow { color: var(--text-yellow); }
+
+.leaderboard-section {
+  margin: 24px 0;
+  text-align: left;
+}
+
+.leaderboard-title {
+  color: var(--text-cyan);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.leaderboard-table th {
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  border-bottom: 1px solid #2a3a4a;
+  text-align: left;
+}
+
+.leaderboard-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #141c28;
+  color: var(--text-primary);
+}
+
+.leaderboard-table tr.current {
+  background: rgba(0, 229, 255, 0.06);
+}
+
+.leaderboard-table tr.current td {
+  color: var(--text-cyan);
+  font-weight: 700;
+}
+
+.leaderboard-table .rank-col { width: 50px; text-align: center; }
+.leaderboard-table .score-col { text-align: right; }
+
+.results-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.result-btn {
+  padding: 14px 32px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.result-btn.primary {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.15), rgba(0, 229, 255, 0.1));
+  border: 2px solid var(--accent-green);
+  color: var(--accent-green);
+}
+
+.result-btn.primary:hover {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.25), rgba(0, 229, 255, 0.15));
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+  transform: translateY(-1px);
+}
+
+.result-btn.secondary {
+  background: transparent;
+  border: 2px solid #3a4a5a;
+  color: var(--text-muted);
+}
+
+.result-btn.secondary:hover {
+  border-color: var(--text-cyan);
+  color: var(--text-cyan);
+}
+
+/* ============================================================
    ANIMATIONS
    ============================================================ */
 @keyframes fadeIn {
@@ -662,13 +862,13 @@ body::after {
 }
 
 @keyframes toastIn {
-  from { opacity: 0; transform: translateX(40px); }
-  to { opacity: 1; transform: translateX(0); }
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 @keyframes toastOut {
-  from { opacity: 1; transform: translateX(0); }
-  to { opacity: 0; transform: translateX(40px); }
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
 }
 
 @keyframes pulse-red {
@@ -695,7 +895,8 @@ body::after {
    ============================================================ */
 @media (max-width: 900px) {
   #learning-panel { width: 280px; }
-  .lesson-toast { width: 300px; right: 10px; }
+  .lesson-toast { width: 380px; }
+  .results-stats { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -707,5 +908,7 @@ body::after {
   .os-selector { flex-direction: column; }
   #learning-panel { width: 0; border-left: none; }
   #learning-toggle.visible { display: block; }
+  .results-stats { grid-template-columns: 1fr; }
+  .results-buttons { flex-direction: column; }
 }
 

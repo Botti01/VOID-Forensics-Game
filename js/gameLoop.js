@@ -3,17 +3,20 @@
 import gameState, { advanceEncryption } from './gameState.js';
 import { printAlert, printBlank, printError, printHeader, printInfo, lockInput } from './terminal.js';
 import { playAlert } from './audio.js';
+import { generateReport } from './scoring.js';
 
 let timerInterval = null;
 let encryptionInterval = null;
 let updateHUDCallback = null;
+let onGameOverCallback = null;
 
 /**
  * Start the game loop (timer + encryption).
  * @param {Function} onHUDUpdate - callback to update the HUD display
  */
-export function startGameLoop(onHUDUpdate) {
+export function startGameLoop(onHUDUpdate, onGameOver) {
   updateHUDCallback = onHUDUpdate;
+  onGameOverCallback = onGameOver || null;
   gameState.gamePhase = 'playing';
 
   // Timer: counts down every second
@@ -87,15 +90,9 @@ function triggerGameOver() {
   printInfo("  The volatile memory evidence has been lost.");
   printInfo("  Remember: In live incident response, speed is critical.");
   printBlank();
-  printInfo("  Type 'report' to view your forensic investigation report.");
-  printBlank();
 
-  lockInput();
-  // Re-enable input just for the report command
-  setTimeout(() => {
-    const input = document.getElementById('terminal-input');
-    if (input) { input.disabled = false; }
-  }, 1000);
+  generateReport();
 
   if (updateHUDCallback) updateHUDCallback();
+  if (onGameOverCallback) onGameOverCallback();
 }

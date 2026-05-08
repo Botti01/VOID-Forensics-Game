@@ -25,7 +25,7 @@ const COMMANDS = {
   status:   { handler: cmdStatus,   desc: "Show current encryption %, time remaining, score" },
   clear:    { handler: cmdClear,    desc: "Clear the terminal screen" },
   mute:     { handler: cmdMute,     desc: "Toggle sound effects on/off" },
-  report:   { handler: cmdReport,   desc: "View forensic investigation report (after game end)" },
+
 };
 
 /**
@@ -405,9 +405,9 @@ function cmdKill(args, flags) {
       printBlank();
       printSuccess(`  AES Key Recovered: ${gameState.aesKey}`);
       printSuccess(`  Encryption halted at: ${gameState.encryptionProgress}%`);
-      printBlank();
-      printInfo("Type 'report' to view your full forensic investigation report.");
       gameState.gamePhase = 'won';
+      printBlank();
+      generateReport();
     } else {
       printBlank();
       printWarning("═══════════════════════════════════════════════");
@@ -415,11 +415,10 @@ function cmdKill(args, flags) {
       printWarning("  the AES key was NOT recovered from memory!");
       printWarning("  Encrypted files cannot be decrypted.");
       printWarning("═══════════════════════════════════════════════");
-      printBlank();
-      printInfo("Tip: Use 'memdump --pid <PID>' BEFORE killing the process next time.");
-      printInfo("Type 'report' to view your investigation report.");
       gameState.gamePhase = 'lost';
       triggerLesson('killed_before_dump');
+      printBlank();
+      generateReport();
     }
   } else if (result.wasInnocent) {
     printError(`[✗] WARNING: You killed a LEGITIMATE process: ${proc.name} (PID: ${pid})`);
@@ -468,12 +467,4 @@ function require_terminal() { return { clearTerminal: clearFn || (() => {}) }; }
 function cmdMute() {
   gameState.soundEnabled = !gameState.soundEnabled;
   printInfo(`Sound effects: ${gameState.soundEnabled ? 'ON' : 'OFF'}`);
-}
-
-function cmdReport() {
-  if (gameState.gamePhase !== 'won' && gameState.gamePhase !== 'lost') {
-    printError("Report is only available after the investigation concludes.");
-    return;
-  }
-  generateReport();
 }

@@ -123,9 +123,38 @@
       </button>
 
     </div>
+
+    <!-- ═══════════ RESULTS PAGE (hidden initially) ═══════════ -->
+    <div id="results-page" class="hidden">
+      <div class="results-container">
+        <div class="results-title">INVESTIGATION COMPLETE</div>
+        <div class="results-outcome" id="results-outcome">—</div>
+        <div class="results-stats">
+          <div class="stat-card"><div class="stat-label">Score</div><div class="stat-value" id="results-score">0</div></div>
+          <div class="stat-card"><div class="stat-label">Rank</div><div class="stat-value green" id="results-rank">—</div></div>
+          <div class="stat-card"><div class="stat-label">Time Used</div><div class="stat-value" id="results-time">—</div></div>
+          <div class="stat-card"><div class="stat-label">Commands</div><div class="stat-value" id="results-commands">0</div></div>
+          <div class="stat-card"><div class="stat-label">Encryption</div><div class="stat-value red" id="results-encryption">0%</div></div>
+          <div class="stat-card"><div class="stat-label">Lessons</div><div class="stat-value yellow" id="results-lessons">0</div></div>
+        </div>
+        <div class="leaderboard-section">
+          <div class="leaderboard-title">🏆 Session Leaderboard</div>
+          <table class="leaderboard-table">
+            <thead><tr><th class="rank-col">#</th><th>Analyst</th><th>OS</th><th>Outcome</th><th class="score-col">Score</th></tr></thead>
+            <tbody id="leaderboard-body"></tbody>
+          </table>
+        </div>
+        <div class="results-buttons">
+          <button class="result-btn primary" id="btn-replay">▶ PLAY AGAIN</button>
+          <button class="result-btn secondary" id="btn-back-menu">← BACK TO MENU</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
+
 
