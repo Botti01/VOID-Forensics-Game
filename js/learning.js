@@ -88,21 +88,34 @@ function showToast(lesson) {
   toast.innerHTML = `
     <div class="toast-header">
       <span class="toast-label">📘 Forensic Insight</span>
-      <button class="toast-close" title="Close">✕</button>
+      <button class="toast-close" title="Close (Enter)">✕</button>
     </div>
     <div class="toast-title">${lesson.title}</div>
     <div class="toast-text">${lesson.text}</div>
+    <div class="toast-hint">Press Enter or click ✕ to close</div>
   `;
   document.body.appendChild(toast);
+
+  let dismissed = false;
   const dismiss = () => {
+    if (dismissed) return;
+    dismissed = true;
+    document.removeEventListener('keyup', onKey);
     toast.classList.add('hiding');
     backdrop.style.opacity = '0';
     backdrop.style.transition = 'opacity 0.3s';
-    setTimeout(() => { toast.remove(); backdrop.remove(); }, 300);
+    setTimeout(() => {
+      toast.remove(); backdrop.remove();
+      const input = document.getElementById('terminal-input');
+      if (input) input.focus();
+    }, 300);
   };
+  const onKey = (e) => { if (e.key === 'Enter') { e.preventDefault(); dismiss(); } };
+  // Delay listener to avoid the same Enter that triggered the command
+  setTimeout(() => { if (!dismissed) document.addEventListener('keyup', onKey); }, 250);
   toast.querySelector('.toast-close').addEventListener('click', dismiss);
   backdrop.addEventListener('click', dismiss);
-  setTimeout(() => { if (toast.parentNode) dismiss(); }, 15000);
+  setTimeout(() => { if (toast.parentNode && !dismissed) dismiss(); }, 15000);
 }
 
 function addToPanelUI(lesson, index) {
@@ -128,4 +141,5 @@ function updateToggleBadge() {
 
 export function getLessonCount() { return lessons.length; }
 export function getAllLessons() { return [...lessons]; }
-export function resetLessons() { lessons.length = 0; shownLessons.clear(); }
+// Only reset per-game counter; shownLessons persists so pop-ups don't repeat on replay
+export function resetLessons() { lessons.length = 0; }

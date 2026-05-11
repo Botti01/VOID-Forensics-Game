@@ -655,8 +655,146 @@ body::after {
   line-height: 1.7;
 }
 
+.lesson-toast .toast-hint {
+  color: var(--text-muted);
+  font-size: 10px;
+  margin-top: 12px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
 .lesson-toast.hiding {
   animation: toastOut 0.3s ease forwards;
+}
+
+/* ============================================================
+   REPORT MODAL (end-game full-screen overlay)
+   ============================================================ */
+.report-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 600;
+}
+
+.report-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 640px;
+  max-width: 92vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent-cyan);
+  border-radius: 10px;
+  padding: 32px 36px;
+  z-index: 601;
+  animation: toastIn 0.5s ease;
+  box-shadow: 0 12px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(0, 229, 255, 0.12);
+}
+
+.report-modal h2 {
+  color: var(--accent-cyan);
+  font-size: 18px;
+  letter-spacing: 3px;
+  text-align: center;
+  margin: 0 0 6px 0;
+}
+
+.report-modal .report-outcome {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.report-modal .report-outcome.win { color: var(--accent-green); }
+.report-modal .report-outcome.loss { color: var(--text-red); }
+
+.report-modal .report-section {
+  margin-bottom: 16px;
+}
+
+.report-modal .report-section-title {
+  color: var(--text-cyan);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #1a2a3a;
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+
+.report-modal .report-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 13px;
+}
+
+.report-modal .report-row .label { color: var(--text-muted); }
+.report-modal .report-row .value { color: var(--text-primary); font-weight: 600; }
+.report-modal .report-row .value.ok { color: var(--accent-green); }
+.report-modal .report-row .value.fail { color: var(--text-red); }
+
+.report-modal .report-rank {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  margin: 12px 0;
+  letter-spacing: 2px;
+}
+
+.report-modal .report-continue {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin-top: 20px;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(0, 255, 136, 0.1));
+  border: 2px solid var(--accent-cyan);
+  border-radius: 6px;
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.report-modal .report-continue:hover {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.25), rgba(0, 255, 136, 0.15));
+  box-shadow: 0 0 25px rgba(0, 229, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.report-cmds-list {
+  max-height: 150px;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+.report-cmd {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 2px 0;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.report-tip {
+  font-size: 12px;
+  color: var(--text-yellow);
+  padding: 3px 0;
 }
 
 /* ============================================================

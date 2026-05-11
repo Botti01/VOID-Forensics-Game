@@ -35,6 +35,7 @@ export function getRank(score) {
 }
 
 export function resetScoring() { scoreLog.length = 0; }
+export function getScoreLog() { return [...scoreLog]; }
 
 /**
  * Generate and print the full forensic investigation report.

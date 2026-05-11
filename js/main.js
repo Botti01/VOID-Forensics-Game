@@ -7,8 +7,8 @@ import { parseCommand } from './parser.js';
 import { bindClear } from './commands.js';
 import { startGameLoop, stopGameLoop } from './gameLoop.js';
 import { playKeyClick } from './audio.js';
-import { getLessonCount, resetLessons } from './learning.js';
-import { getRank, resetScoring } from './scoring.js';
+import { getLessonCount, resetLessons, getAllLessons } from './learning.js';
+import { getRank, resetScoring, getScoreLog } from './scoring.js';
 
 // Session leaderboard (persists in same tab)
 const sessionLeaderboard = [];
@@ -70,19 +70,15 @@ function launchGame() {
   document.getElementById('hud-encryption-bar').className = 'hud-bar-fill';
   document.getElementById('hud-score').textContent = '0';
 
-  // Clear terminal & panel
+  // Clear terminal (but keep learning panel notes from previous games)
   document.getElementById('terminal-output').innerHTML = '';
-  const lc = document.getElementById('learning-content');
-  if (lc) lc.innerHTML = '<p class="panel-empty">No forensic insights discovered yet.<br><br>Investigate the system to unlock educational notes.</p>';
-  const badge = document.getElementById('learning-badge');
-  if (badge) badge.textContent = '0';
 
   // Ensure panel visible
   document.getElementById('learning-panel').classList.remove('collapsed');
   document.getElementById('learning-toggle').classList.remove('visible');
 
   // Clean up stale UI
-  document.querySelectorAll('.lesson-toast, .toast-backdrop, .continue-btn-wrapper').forEach(el => el.remove());
+  document.querySelectorAll('.lesson-toast, .toast-backdrop, .continue-btn-wrapper, .report-backdrop, .report-modal').forEach(el => el.remove());
 
   // Re-enable input
   const termInput = document.getElementById('terminal-input');
@@ -121,7 +117,7 @@ function returnToMenu() {
   document.getElementById('game-view').classList.add('hidden');
   document.getElementById('results-page').classList.add('hidden');
   document.getElementById('start-menu').classList.remove('hidden');
-  document.querySelectorAll('.lesson-toast, .toast-backdrop').forEach(t => t.remove());
+  document.querySelectorAll('.lesson-toast, .toast-backdrop, .report-backdrop, .report-modal').forEach(t => t.remove());
   document.getElementById('player-name').focus();
 }
 
@@ -185,20 +181,115 @@ function showEndGameUI() {
     termInput.placeholder = 'Investigation complete.';
   }
 
-  // Remove existing continue buttons
-  document.querySelectorAll('.continue-btn-wrapper').forEach(el => el.remove());
+  // Remove stale modals
+  document.querySelectorAll('.report-backdrop, .report-modal, .continue-btn-wrapper').forEach(el => el.remove());
 
-  const wrapper = document.createElement('div');
-  wrapper.className = 'continue-btn-wrapper';
-  const btn = document.createElement('button');
-  btn.className = 'continue-btn';
-  btn.textContent = '▶ CONTINUE TO RESULTS';
-  btn.addEventListener('click', showResultsPage);
-  wrapper.appendChild(btn);
+  // Gather data
+  const elapsed = gameState.totalTime - gameState.timeRemaining;
+  const rank = getRank(gameState.score);
+  const osType = gameState.scenarioMeta?.osType || 'linux';
+  const malName = osType === 'linux' ? 'rsyslogd (LD_PRELOAD Injection)' : 'svchost.exe (Process Hollowing)';
+  const malPID = gameState.maliciousPID || '?';
+  const isWin = gameState.gamePhase === 'won';
+  const scoreLog = getScoreLog();
+  const lessons = getAllLessons();
 
-  const output = document.getElementById('terminal-output');
-  output.appendChild(wrapper);
-  output.scrollTop = output.scrollHeight;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'report-backdrop';
+  document.body.appendChild(backdrop);
+
+  const modal = document.createElement('div');
+  modal.className = 'report-modal';
+
+  // Helpers
+  const row = (label, value, cls) =>
+    `<div class="report-row"><span class="label">${label}</span><span class="value ${cls || ''}">${value}</span></div>`;
+  const chk = (flag, label, ok, fail) => flag
+    ? row(label, '\u2713 ' + ok, 'ok')
+    : row(label, '\u2717 ' + fail, 'fail');
+
+  // Score breakdown HTML
+  let scoreBreakdownHTML = '';
+  for (const e of scoreLog) {
+    const sign = e.points >= 0 ? '+' : '';
+    const cls = e.points >= 0 ? 'ok' : 'fail';
+    scoreBreakdownHTML += row(e.reason, sign + e.points, cls);
+  }
+
+  // Commands executed HTML
+  let commandsHTML = '';
+  for (const a of gameState.actionsLog) {
+    commandsHTML += `<div class="report-cmd">[${a.timestamp}]  ${a.details || a.action}</div>`;
+  }
+
+  // Learning notes HTML
+  let learningHTML = '';
+  if (!gameState.foundMaliciousProcess) learningHTML += `<div class="report-tip">\u2192 Use 'pstree' to identify processes starting abnormally late.</div>`;
+  if (!gameState.foundC2Connection) learningHTML += `<div class="report-tip">\u2192 Use 'netscan' to find connections to unknown external IPs.</div>`;
+  if (!gameState.extractedKey) learningHTML += `<div class="report-tip">\u2192 Always run 'memdump --pid &lt;PID&gt;' BEFORE killing a process.</div>`;
+  if (gameState.innocentKills > 0) learningHTML += `<div class="report-tip">\u2192 Verify a process is malicious before terminating it.</div>`;
+  if (!learningHTML) learningHTML = `<div class="report-tip" style="color:var(--accent-green)">\u2713 Excellent investigation \u2014 no critical mistakes!</div>`;
+
+  modal.innerHTML = `
+    <h2>V.O.I.D. \u2014 FORENSIC INVESTIGATION REPORT</h2>
+    <div class="report-outcome ${isWin ? 'win' : 'loss'}">
+      ${isWin ? '\u2605 MISSION SUCCESSFUL \u2014 Ransomware Neutralized' : '\u2717 MISSION FAILED'}
+    </div>
+    <div class="report-rank">${rank.title} ${rank.stars}</div>
+
+    <div class="report-section">
+      <div class="report-section-title">Timeline</div>
+      ${row('Analyst', gameState.playerName)}
+      ${row('Target', gameState.scenarioMeta?.target || '\u2014')}
+      ${row('Target OS', gameState.scenarioMeta?.os || '\u2014')}
+      ${row('Time Elapsed', fmtTime(elapsed) + ' / ' + Math.floor(gameState.totalTime / 60) + ':00')}
+      ${row('Encryption at End', gameState.encryptionProgress + '%')}
+      ${row('Files Encrypted', gameState.encryptedFiles.length + ' / ' + gameState.fileTargets.length)}
+    </div>
+
+    <div class="report-section">
+      <div class="report-section-title">Investigation Results</div>
+      ${chk(gameState.foundMaliciousProcess, 'Malware Identified', malName + ' (PID ' + malPID + ')', 'Not identified')}
+      ${chk(gameState.foundC2Connection, 'C2 Server Found', 'External C2 connections detected', 'Not found')}
+      ${chk(gameState.foundInjectedCode, 'Injected Code', 'RWX memory detected via malfind', 'Not detected')}
+      ${chk(gameState.extractedKey, 'AES Key Recovered', gameState.aesKey, 'Key lost \u2014 files unrecoverable')}
+      ${chk(gameState.killedMalicious, 'Ransomware Killed', 'Process terminated', 'Still running')}
+    </div>
+
+    <div class="report-section">
+      <div class="report-section-title">Penalties</div>
+      ${row('Innocent Kills', gameState.innocentKills + ' (\u2212' + (gameState.innocentKills * 50) + ' pts)', gameState.innocentKills > 0 ? 'fail' : '')}
+      ${row('Hints Used', String(gameState.hintsUsed))}
+    </div>
+
+    <div class="report-section">
+      <div class="report-section-title">Score Breakdown</div>
+      ${scoreBreakdownHTML}
+      <div class="report-row" style="border-top:1px solid #2a3a4a;padding-top:6px;margin-top:6px">
+        <span class="label" style="font-weight:700">TOTAL SCORE</span>
+        <span class="value" style="font-weight:700;font-size:15px">${gameState.score} / 1000</span>
+      </div>
+    </div>
+
+    <div class="report-section">
+      <div class="report-section-title">Commands Executed (${gameState.commandCount})</div>
+      <div class="report-cmds-list">${commandsHTML || '<div class="report-cmd">No commands executed.</div>'}</div>
+    </div>
+
+    <div class="report-section">
+      <div class="report-section-title">Learning Notes</div>
+      ${learningHTML}
+    </div>
+
+    <button class="report-continue">\u25b6 CONTINUE TO RESULTS</button>
+  `;
+  document.body.appendChild(modal);
+
+  modal.querySelector('.report-continue').addEventListener('click', () => {
+    backdrop.remove();
+    modal.remove();
+    showResultsPage();
+  });
 }
 
 function showResultsPage() {
