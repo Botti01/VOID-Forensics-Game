@@ -7,8 +7,8 @@ import { parseCommand } from './parser.js';
 import { bindClear } from './commands.js';
 import { startGameLoop, stopGameLoop } from './gameLoop.js';
 import { playKeyClick } from './audio.js';
-import { getLessonCount, resetLessons, getAllLessons } from './learning.js';
-import { getRank, resetScoring, getScoreLog } from './scoring.js';
+import { getLessonCount, resetLessons, getAllLessons, waitForToastDismiss } from './learning.js';
+import { getRank, resetScoring, getScoreLog, applySpeedBonus } from './scoring.js';
 
 // Session leaderboard (persists in same tab)
 const sessionLeaderboard = [];
@@ -181,8 +181,16 @@ function showEndGameUI() {
     termInput.placeholder = 'Investigation complete.';
   }
 
+  // Wait for any active lesson toast to be read and dismissed first
+  waitForToastDismiss().then(() => showReportModal());
+}
+
+function showReportModal() {
   // Remove stale modals
   document.querySelectorAll('.report-backdrop, .report-modal, .continue-btn-wrapper').forEach(el => el.remove());
+
+  // Apply speed bonus before building report
+  applySpeedBonus();
 
   // Gather data
   const elapsed = gameState.totalTime - gameState.timeRemaining;
@@ -237,48 +245,54 @@ function showEndGameUI() {
     </div>
     <div class="report-rank">${rank.title} ${rank.stars}</div>
 
-    <div class="report-section">
-      <div class="report-section-title">Timeline</div>
-      ${row('Analyst', gameState.playerName)}
-      ${row('Target', gameState.scenarioMeta?.target || '\u2014')}
-      ${row('Target OS', gameState.scenarioMeta?.os || '\u2014')}
-      ${row('Time Elapsed', fmtTime(elapsed) + ' / ' + Math.floor(gameState.totalTime / 60) + ':00')}
-      ${row('Encryption at End', gameState.encryptionProgress + '%')}
-      ${row('Files Encrypted', gameState.encryptedFiles.length + ' / ' + gameState.fileTargets.length)}
-    </div>
+    <div class="report-grid">
+      <div class="report-col">
+        <div class="report-section">
+          <div class="report-section-title">Timeline</div>
+          ${row('Analyst', gameState.playerName)}
+          ${row('Target', gameState.scenarioMeta?.target || '\u2014')}
+          ${row('Target OS', gameState.scenarioMeta?.os || '\u2014')}
+          ${row('Time Elapsed', fmtTime(elapsed) + ' / ' + Math.floor(gameState.totalTime / 60) + ':00')}
+          ${row('Encryption at End', gameState.encryptionProgress + '%')}
+          ${row('Files Encrypted', gameState.encryptedFiles.length + ' / ' + gameState.fileTargets.length)}
+        </div>
 
-    <div class="report-section">
-      <div class="report-section-title">Investigation Results</div>
-      ${chk(gameState.foundMaliciousProcess, 'Malware Identified', malName + ' (PID ' + malPID + ')', 'Not identified')}
-      ${chk(gameState.foundC2Connection, 'C2 Server Found', 'External C2 connections detected', 'Not found')}
-      ${chk(gameState.foundInjectedCode, 'Injected Code', 'RWX memory detected via malfind', 'Not detected')}
-      ${chk(gameState.extractedKey, 'AES Key Recovered', gameState.aesKey, 'Key lost \u2014 files unrecoverable')}
-      ${chk(gameState.killedMalicious, 'Ransomware Killed', 'Process terminated', 'Still running')}
-    </div>
+        <div class="report-section">
+          <div class="report-section-title">Investigation Results</div>
+          ${chk(gameState.foundMaliciousProcess, 'Malware Identified', malName + ' (PID ' + malPID + ')', 'Not identified')}
+          ${chk(gameState.foundC2Connection, 'C2 Server Found', 'External C2 connections detected', 'Not found')}
+          ${chk(gameState.foundInjectedCode, 'Injected Code', 'RWX memory detected via malfind', 'Not detected')}
+          ${chk(gameState.extractedKey, 'AES Key Recovered', gameState.aesKey, 'Key lost \u2014 files unrecoverable')}
+          ${chk(gameState.killedMalicious, 'Ransomware Killed', 'Process terminated', 'Still running')}
+        </div>
 
-    <div class="report-section">
-      <div class="report-section-title">Penalties</div>
-      ${row('Innocent Kills', gameState.innocentKills + ' (\u2212' + (gameState.innocentKills * 50) + ' pts)', gameState.innocentKills > 0 ? 'fail' : '')}
-      ${row('Hints Used', String(gameState.hintsUsed))}
-    </div>
-
-    <div class="report-section">
-      <div class="report-section-title">Score Breakdown</div>
-      ${scoreBreakdownHTML}
-      <div class="report-row" style="border-top:1px solid #2a3a4a;padding-top:6px;margin-top:6px">
-        <span class="label" style="font-weight:700">TOTAL SCORE</span>
-        <span class="value" style="font-weight:700;font-size:15px">${gameState.score} / 1000</span>
+        <div class="report-section">
+          <div class="report-section-title">Penalties</div>
+          ${row('Innocent Kills', gameState.innocentKills + ' (\u2212' + (gameState.innocentKills * 50) + ' pts)', gameState.innocentKills > 0 ? 'fail' : '')}
+          ${row('Hints Used', String(gameState.hintsUsed))}
+        </div>
       </div>
-    </div>
 
-    <div class="report-section">
-      <div class="report-section-title">Commands Executed (${gameState.commandCount})</div>
-      <div class="report-cmds-list">${commandsHTML || '<div class="report-cmd">No commands executed.</div>'}</div>
-    </div>
+      <div class="report-col">
+        <div class="report-section">
+          <div class="report-section-title">Score Breakdown</div>
+          ${scoreBreakdownHTML}
+          <div class="report-row" style="border-top:1px solid #2a3a4a;padding-top:6px;margin-top:6px">
+            <span class="label" style="font-weight:700">TOTAL SCORE</span>
+            <span class="value" style="font-weight:700;font-size:15px">${gameState.score} / 1000</span>
+          </div>
+        </div>
 
-    <div class="report-section">
-      <div class="report-section-title">Learning Notes</div>
-      ${learningHTML}
+        <div class="report-section">
+          <div class="report-section-title">Commands Executed (${gameState.commandCount})</div>
+          <div class="report-cmds-list">${commandsHTML || '<div class="report-cmd">No commands executed.</div>'}</div>
+        </div>
+
+        <div class="report-section">
+          <div class="report-section-title">Learning Notes</div>
+          ${learningHTML}
+        </div>
+      </div>
     </div>
 
     <button class="report-continue">\u25b6 CONTINUE TO RESULTS</button>
@@ -293,6 +307,9 @@ function showEndGameUI() {
 }
 
 function showResultsPage() {
+  // Remove any lingering lesson toasts
+  document.querySelectorAll('.lesson-toast, .toast-backdrop').forEach(el => el.remove());
+
   const elapsed = gameState.totalTime - gameState.timeRemaining;
 
   // Save to session leaderboard

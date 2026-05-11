@@ -523,7 +523,7 @@ body::after {
 
 .lesson-card .lesson-title {
   color: var(--text-cyan);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   margin-bottom: 6px;
   text-transform: uppercase;
@@ -532,13 +532,13 @@ body::after {
 
 .lesson-card .lesson-text {
   color: var(--text-white);
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 .lesson-card .lesson-source {
   color: var(--text-dim);
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 6px;
 }
 
@@ -603,13 +603,13 @@ body::after {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 480px;
-  max-width: 90vw;
+  width: 560px;
+  max-width: 92vw;
   background: var(--bg-panel);
   border: 1px solid var(--accent-cyan);
   border-left: 4px solid var(--accent-cyan);
   border-radius: 8px;
-  padding: 24px 28px;
+  padding: 28px 32px;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 229, 255, 0.15);
   z-index: 500;
   animation: toastIn 0.4s ease;
@@ -619,12 +619,12 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .lesson-toast .toast-label {
   color: var(--accent-cyan);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -632,27 +632,29 @@ body::after {
 
 .lesson-toast .toast-close {
   background: none;
-  border: none;
+  border: 1px solid #2a3a4a;
+  border-radius: 4px;
   color: var(--text-muted);
   cursor: pointer;
   font-size: 16px;
   font-family: var(--font-mono);
-  transition: color 0.2s;
+  padding: 2px 8px;
+  transition: all 0.2s;
 }
 
-.lesson-toast .toast-close:hover { color: var(--text-white); }
+.lesson-toast .toast-close:hover { color: var(--text-white); border-color: var(--text-cyan); }
 
 .lesson-toast .toast-title {
   color: var(--text-white);
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 700;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
 .lesson-toast .toast-text {
   color: var(--text-primary);
-  font-size: 12px;
-  line-height: 1.7;
+  font-size: 16px;
+  line-height: 1.8;
 }
 
 .lesson-toast .toast-hint {
@@ -682,57 +684,63 @@ body::after {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 640px;
-  max-width: 92vw;
-  max-height: 85vh;
+  width: 1100px;
+  max-width: 95vw;
+  max-height: 95vh;
   overflow-y: auto;
   background: var(--bg-secondary);
   border: 1px solid var(--accent-cyan);
   border-radius: 10px;
-  padding: 32px 36px;
+  padding: 32px 40px;
   z-index: 601;
   animation: toastIn 0.5s ease;
   box-shadow: 0 12px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(0, 229, 255, 0.12);
 }
 
+.report-modal .report-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 36px;
+}
+
 .report-modal h2 {
   color: var(--accent-cyan);
-  font-size: 18px;
+  font-size: 22px;
   letter-spacing: 3px;
   text-align: center;
-  margin: 0 0 6px 0;
+  margin: 0 0 8px 0;
 }
 
 .report-modal .report-outcome {
   text-align: center;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .report-modal .report-outcome.win { color: var(--accent-green); }
 .report-modal .report-outcome.loss { color: var(--text-red); }
 
 .report-modal .report-section {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .report-modal .report-section-title {
   color: var(--text-cyan);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
   border-bottom: 1px solid #1a2a3a;
-  padding-bottom: 4px;
-  margin-bottom: 8px;
+  padding-bottom: 5px;
+  margin-bottom: 10px;
 }
 
 .report-modal .report-row {
   display: flex;
   justify-content: space-between;
-  padding: 3px 0;
-  font-size: 13px;
+  padding: 4px 0;
+  font-size: 15px;
 }
 
 .report-modal .report-row .label { color: var(--text-muted); }
@@ -742,10 +750,10 @@ body::after {
 
 .report-modal .report-rank {
   text-align: center;
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--accent-cyan);
-  margin: 12px 0;
+  margin: 14px 0;
   letter-spacing: 2px;
 }
 
@@ -774,17 +782,15 @@ body::after {
 }
 
 .report-cmds-list {
-  max-height: 150px;
-  overflow-y: auto;
   background: var(--bg-primary);
   border-radius: 4px;
-  padding: 8px 10px;
+  padding: 10px 12px;
 }
 
 .report-cmd {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-muted);
-  padding: 2px 0;
+  padding: 3px 0;
   font-family: var(--font-mono);
   white-space: nowrap;
   overflow: hidden;
@@ -792,7 +798,7 @@ body::after {
 }
 
 .report-tip {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-yellow);
   padding: 3px 0;
 }
@@ -1035,6 +1041,7 @@ body::after {
   #learning-panel { width: 280px; }
   .lesson-toast { width: 380px; }
   .results-stats { grid-template-columns: 1fr 1fr; }
+  .report-modal .report-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {

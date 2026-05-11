@@ -2,7 +2,7 @@
 
 import gameState, { getProcess, getChildren, killProcess } from './gameState.js';
 import { printLine, printError, printSuccess, printWarning, printHeader, printInfo, printBlank, printSeparator } from './terminal.js';
-import { addScore, removeScore, generateReport } from './scoring.js';
+import { addScore, removeScore } from './scoring.js';
 import { triggerLesson } from './learning.js';
 
 // ============================================================
@@ -407,7 +407,7 @@ function cmdKill(args, flags) {
       printSuccess(`  Encryption halted at: ${gameState.encryptionProgress}%`);
       gameState.gamePhase = 'won';
       printBlank();
-      generateReport();
+      // Report is shown via modal popup in main.js
     } else {
       printBlank();
       printWarning("═══════════════════════════════════════════════");
@@ -418,7 +418,7 @@ function cmdKill(args, flags) {
       gameState.gamePhase = 'lost';
       triggerLesson('killed_before_dump');
       printBlank();
-      generateReport();
+      // Report is shown via modal popup in main.js
     }
   } else if (result.wasInnocent) {
     printError(`[✗] WARNING: You killed a LEGITIMATE process: ${proc.name} (PID: ${pid})`);

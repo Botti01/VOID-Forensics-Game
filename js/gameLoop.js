@@ -3,7 +3,8 @@
 import gameState, { advanceEncryption } from './gameState.js';
 import { printAlert, printBlank, printError, printHeader, printInfo, lockInput } from './terminal.js';
 import { playAlert } from './audio.js';
-import { generateReport } from './scoring.js';
+// Note: generateReport() is kept in scoring.js but no longer called here.
+// The report is now displayed via modal popup in main.js.
 
 let timerInterval = null;
 let encryptionInterval = null;
@@ -91,7 +92,7 @@ function triggerGameOver() {
   printInfo("  Remember: In live incident response, speed is critical.");
   printBlank();
 
-  generateReport();
+  // Report is shown via modal popup in main.js
 
   if (updateHUDCallback) updateHUDCallback();
   if (onGameOverCallback) onGameOverCallback();

@@ -38,20 +38,27 @@ export function resetScoring() { scoreLog.length = 0; }
 export function getScoreLog() { return [...scoreLog]; }
 
 /**
- * Generate and print the full forensic investigation report.
+ * Apply speed bonus (call once at game end).
  */
-export function generateReport() {
-  const elapsed = gameState.totalTime - gameState.timeRemaining;
-  const elapsedMin = Math.floor(elapsed / 60);
-  const elapsedSec = elapsed % 60;
-  const totalMin = Math.floor(gameState.totalTime / 60);
-
-  // Speed bonus
+export function applySpeedBonus() {
   if (gameState.gamePhase === 'won') {
     const timeRatio = gameState.timeRemaining / gameState.totalTime;
     const speedBonus = Math.floor(timeRatio * 250);
     addScore(speedBonus, 'Speed bonus (time remaining)');
   }
+}
+
+/**
+ * Generate and print the full forensic investigation report.
+ * NOTE: Terminal report is no longer displayed — kept for reference.
+ * The report is now shown via the modal popup in main.js.
+ */
+export function generateReport() {
+  applySpeedBonus();
+  const elapsed = gameState.totalTime - gameState.timeRemaining;
+  const elapsedMin = Math.floor(elapsed / 60);
+  const elapsedSec = elapsed % 60;
+  const totalMin = Math.floor(gameState.totalTime / 60);
 
   const { rank, title, stars } = getRank(gameState.score);
   const outcome = gameState.gamePhase === 'won' ? 'MISSION SUCCESS' : 'MISSION FAILED';

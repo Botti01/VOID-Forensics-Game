@@ -5,6 +5,7 @@ import gameState from './gameState.js';
 
 const lessons = [];
 const shownLessons = new Set();
+let toastActive = false;
 
 const LESSON_DB = {
   pstree_anomaly: {
@@ -96,16 +97,20 @@ function showToast(lesson) {
   `;
   document.body.appendChild(toast);
 
+  toastActive = true;
   let dismissed = false;
   const dismiss = () => {
     if (dismissed) return;
     dismissed = true;
+    toastActive = false;
     document.removeEventListener('keyup', onKey);
     toast.classList.add('hiding');
     backdrop.style.opacity = '0';
     backdrop.style.transition = 'opacity 0.3s';
     setTimeout(() => {
       toast.remove(); backdrop.remove();
+      // Signal that the toast has been dismissed
+      document.dispatchEvent(new CustomEvent('lesson-toast-dismissed'));
       const input = document.getElementById('terminal-input');
       if (input) input.focus();
     }, 300);
@@ -143,3 +148,15 @@ export function getLessonCount() { return lessons.length; }
 export function getAllLessons() { return [...lessons]; }
 // Only reset per-game counter; shownLessons persists so pop-ups don't repeat on replay
 export function resetLessons() { lessons.length = 0; }
+export function isToastActive() { return toastActive; }
+
+/**
+ * Returns a Promise that resolves when the active toast is dismissed.
+ * If no toast is active, resolves immediately.
+ */
+export function waitForToastDismiss() {
+  if (!toastActive) return Promise.resolve();
+  return new Promise(resolve => {
+    document.addEventListener('lesson-toast-dismissed', resolve, { once: true });
+  });
+}
