@@ -8,10 +8,12 @@ import { bindClear } from './commands.js';
 import { startGameLoop, stopGameLoop } from './gameLoop.js';
 import { playKeyClick } from './audio.js';
 import { getLessonCount, resetLessons, getAllLessons, waitForToastDismiss } from './learning.js';
-import { getRank, resetScoring, getScoreLog, applySpeedBonus } from './scoring.js';
-
-// Session leaderboard (persists in same tab)
-const sessionLeaderboard = [];
+import {
+  getRank, resetScoring, getScoreLog, applySpeedBonus,
+  buildReportData, generateTxtReport, generateJsonReport,
+  downloadFile, addLeaderboardEntry, loadLeaderboard,
+} from './scoring.js';
+import { showQuiz } from './quiz.js';
 
 let selectedOS = 'linux';
 let playerName = '';
@@ -45,12 +47,7 @@ function setupMenu() {
   });
 }
 
-function launchGame() {
-  // Hide all views, show game
-  document.getElementById('start-menu').classList.add('hidden');
-  document.getElementById('results-page').classList.add('hidden');
-  document.getElementById('game-view').classList.remove('hidden');
-
+async function launchGame() {
   // Reset for new game
   resetLessons();
   resetScoring();
@@ -58,6 +55,14 @@ function launchGame() {
   const scenario = getScenario(selectedOS);
   initState(scenario);
   gameState.playerName = playerName;
+
+  // Show pre-quiz before entering the game
+  await showQuiz('pre');
+
+  // Hide all views, show game
+  document.getElementById('start-menu').classList.add('hidden');
+  document.getElementById('results-page').classList.add('hidden');
+  document.getElementById('game-view').classList.remove('hidden');
 
   // Prompt & HUD
   const serverName = scenario.meta.target.toLowerCase();
@@ -181,8 +186,10 @@ function showEndGameUI() {
     termInput.placeholder = 'Investigation complete.';
   }
 
-  // Wait for any active lesson toast to be read and dismissed first
-  waitForToastDismiss().then(() => showReportModal());
+  // Wait for any active lesson toast, then show post-quiz, then report
+  waitForToastDismiss()
+    .then(() => showQuiz('post'))
+    .then(() => showReportModal());
 }
 
 function showReportModal() {
@@ -295,9 +302,51 @@ function showReportModal() {
       </div>
     </div>
 
+    <div class="report-section" style="margin-top:18px">
+      <div class="report-section-title">Knowledge Assessment</div>
+      <div class="quiz-assessment-grid">
+        <div class="quiz-assessment-card">
+          <div class="quiz-assessment-label">Pre-Quiz</div>
+          <div class="quiz-assessment-value">${gameState.preQuizScore} / 3</div>
+        </div>
+        <div class="quiz-assessment-card">
+          <div class="quiz-assessment-label">Post-Quiz</div>
+          <div class="quiz-assessment-value">${gameState.postQuizScore} / 3</div>
+        </div>
+        <div class="quiz-assessment-card delta">
+          <div class="quiz-assessment-label">Knowledge Delta</div>
+          <div class="quiz-assessment-value ${(gameState.postQuizScore - gameState.preQuizScore) > 0 ? 'positive' : (gameState.postQuizScore - gameState.preQuizScore) < 0 ? 'negative' : ''}">${(gameState.postQuizScore - gameState.preQuizScore) > 0 ? '+' : ''}${gameState.postQuizScore - gameState.preQuizScore}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="report-export-bar">
+      <button class="report-export-btn" id="export-txt" title="Download plain-text forensic report">
+        <span class="export-icon">\u2913</span> Export Report (.txt)
+      </button>
+      <button class="report-export-btn" id="export-json" title="Download structured data for automated grading">
+        <span class="export-icon">{ }</span> Export Data (.json)
+      </button>
+    </div>
+
     <button class="report-continue">\u25b6 CONTINUE TO RESULTS</button>
   `;
   document.body.appendChild(modal);
+
+  // Build report data once, reuse for exports
+  const reportData = buildReportData();
+
+  modal.querySelector('#export-txt').addEventListener('click', () => {
+    const txt = generateTxtReport(reportData);
+    const filename = `VOID_Report_${reportData.analyst}_${reportData.osType}_${Date.now()}.txt`;
+    downloadFile(txt, filename, 'text/plain;charset=utf-8');
+  });
+
+  modal.querySelector('#export-json').addEventListener('click', () => {
+    const json = generateJsonReport(reportData);
+    const filename = `VOID_Report_${reportData.analyst}_${reportData.osType}_${Date.now()}.json`;
+    downloadFile(json, filename, 'application/json;charset=utf-8');
+  });
 
   modal.querySelector('.report-continue').addEventListener('click', () => {
     backdrop.remove();
@@ -312,17 +361,18 @@ function showResultsPage() {
 
   const elapsed = gameState.totalTime - gameState.timeRemaining;
 
-  // Save to session leaderboard
+  // Save to persistent leaderboard (localStorage)
   const entry = {
     name: gameState.playerName,
     os: gameState.scenarioMeta?.osType === 'windows' ? 'Windows' : 'Linux',
     score: gameState.score,
+    rank: getRank(gameState.score).rank,
     outcome: gameState.gamePhase === 'won' ? 'WIN' : 'LOSS',
     time: fmtTime(elapsed),
+    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     ts: Date.now(),
   };
-  sessionLeaderboard.push(entry);
-  sessionLeaderboard.sort((a, b) => b.score - a.score);
+  const leaderboard = addLeaderboardEntry(entry);
 
   // Switch views
   document.getElementById('game-view').classList.add('hidden');
@@ -347,13 +397,13 @@ function showResultsPage() {
     oel.className = 'results-outcome loss';
   }
 
-  // Leaderboard
+  // Leaderboard (from persistent storage)
   const tbody = document.getElementById('leaderboard-body');
   tbody.innerHTML = '';
-  sessionLeaderboard.forEach((e, i) => {
+  leaderboard.forEach((e, i) => {
     const tr = document.createElement('tr');
     if (e.ts === entry.ts) tr.className = 'current';
-    tr.innerHTML = `<td class="rank-col">${i + 1}</td><td>${e.name}</td><td>${e.os}</td><td>${e.outcome}</td><td class="score-col">${e.score}</td>`;
+    tr.innerHTML = `<td class="rank-col">${i + 1}</td><td>${e.name}</td><td>${e.os}</td><td>${e.rank || '—'}</td><td>${e.outcome}</td><td>${e.date || '—'}</td><td class="score-col">${e.score}</td>`;
     tbody.appendChild(tr);
   });
 

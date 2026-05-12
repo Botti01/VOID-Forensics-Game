@@ -1,7 +1,8 @@
-// js/scoring.js — Score Tracker & Final Report Generator for V.O.I.D.
+// js/scoring.js — Score Tracker, Report Builder & Persistent Leaderboard for V.O.I.D.
 
 import gameState from './gameState.js';
 import { printLine, printBlank, printHeader, printSuccess, printWarning, printInfo, printError, printSeparator } from './terminal.js';
+import { getAllLessons } from './learning.js';
 
 const scoreLog = [];
 
@@ -36,6 +37,317 @@ export function getRank(score) {
 
 export function resetScoring() { scoreLog.length = 0; }
 export function getScoreLog() { return [...scoreLog]; }
+
+// ── Persistent Leaderboard (localStorage) ───────────────────────────────────
+
+const LEADERBOARD_KEY = 'void_leaderboard';
+const MAX_LEADERBOARD = 15;
+
+/**
+ * Load leaderboard entries from localStorage.
+ * Returns a sorted array (descending by score).
+ */
+export function loadLeaderboard() {
+  try {
+    const raw = localStorage.getItem(LEADERBOARD_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Save the full leaderboard array to localStorage.
+ */
+function saveLeaderboard(entries) {
+  try {
+    localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries));
+  } catch {
+    /* Storage full or unavailable — fail silently */
+  }
+}
+
+/**
+ * Add a new entry to the persistent leaderboard.
+ * Sorts by score descending, trims to MAX_LEADERBOARD.
+ * Returns the updated array.
+ */
+export function addLeaderboardEntry(entry) {
+  const lb = loadLeaderboard();
+  lb.push(entry);
+  lb.sort((a, b) => b.score - a.score);
+  const trimmed = lb.slice(0, MAX_LEADERBOARD);
+  saveLeaderboard(trimmed);
+  return trimmed;
+}
+
+// ── Report Data Builder ─────────────────────────────────────────────────────
+
+/**
+ * Build a structured report object with all investigation data.
+ * Used by the modal UI, .txt export, and .json export.
+ */
+export function buildReportData() {
+  const elapsed = gameState.totalTime - gameState.timeRemaining;
+  const rank = getRank(gameState.score);
+  const osType = gameState.scenarioMeta?.osType || 'linux';
+  const malName = osType === 'linux'
+    ? 'rsyslogd (LD_PRELOAD Injection)'
+    : 'svchost.exe (Process Hollowing)';
+  const malPID = gameState.maliciousPID || '?';
+  const isWin = gameState.gamePhase === 'won';
+  const lessons = getAllLessons();
+  const now = new Date();
+
+  return {
+    // Header
+    title: 'V.O.I.D. — Forensic Investigation Report',
+    generatedAt: now.toISOString(),
+    generatedAtReadable: now.toLocaleString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }),
+    version: '2.6.1',
+
+    // Analyst info
+    analyst: gameState.playerName,
+    target: gameState.scenarioMeta?.target || '—',
+    targetOS: gameState.scenarioMeta?.os || '—',
+    osType,
+    scenarioName: gameState.scenarioMeta?.name || '—',
+
+    // Outcome
+    outcome: isWin ? 'MISSION SUCCESS' : 'MISSION FAILED',
+    isWin,
+    rank: rank.rank,
+    rankTitle: rank.title,
+    rankStars: rank.stars,
+    rankLabel: rank.label,
+
+    // Timeline
+    timeElapsedSeconds: elapsed,
+    timeElapsedFormatted: fmtTimeForReport(elapsed),
+    timeTotalFormatted: Math.floor(gameState.totalTime / 60) + ':00',
+    encryptionPercent: gameState.encryptionProgress,
+    filesEncrypted: gameState.encryptedFiles.length,
+    filesTotal: gameState.fileTargets.length,
+
+    // Investigation results
+    findings: {
+      malwareIdentified: gameState.foundMaliciousProcess,
+      malwareName: malName,
+      malwarePID: malPID,
+      c2Found: gameState.foundC2Connection,
+      injectedCodeFound: gameState.foundInjectedCode,
+      aesKeyRecovered: gameState.extractedKey,
+      aesKey: gameState.aesKey,
+      ransomwareKilled: gameState.killedMalicious,
+    },
+
+    // Penalties
+    innocentKills: gameState.innocentKills,
+    innocentKillsPenalty: gameState.innocentKills * 50,
+    hintsUsed: gameState.hintsUsed,
+
+    // Score
+    score: gameState.score,
+    maxScore: 1000,
+    scoreBreakdown: getScoreLog(),
+
+    // Commands
+    commandCount: gameState.commandCount,
+    actionsLog: gameState.actionsLog.map(a => ({
+      timestamp: a.timestamp,
+      action: a.action,
+      details: a.details || a.action,
+    })),
+
+    // Quiz Assessment
+    preQuizScore: gameState.preQuizScore,
+    postQuizScore: gameState.postQuizScore,
+    knowledgeDelta: gameState.postQuizScore - gameState.preQuizScore,
+
+    // Learning
+    lessonsUnlocked: lessons.map(l => ({
+      title: l.title,
+      text: l.text,
+      source: l.source,
+    })),
+
+    // Tips
+    learningNotes: buildLearningNotes(),
+  };
+}
+
+function buildLearningNotes() {
+  const notes = [];
+  if (!gameState.foundMaliciousProcess) {
+    notes.push("Use 'pstree' to identify processes starting abnormally late.");
+  }
+  if (!gameState.foundC2Connection) {
+    notes.push("Use 'netscan' to find connections to unknown external IPs.");
+  }
+  if (!gameState.extractedKey) {
+    notes.push("Always run 'memdump --pid <PID>' BEFORE killing a process.");
+  }
+  if (gameState.innocentKills > 0) {
+    notes.push("Verify a process is malicious before terminating it.");
+  }
+  if (notes.length === 0) {
+    notes.push("Excellent investigation — no critical mistakes!");
+  }
+  return notes;
+}
+
+function fmtTimeForReport(s) {
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
+// ── Export Generators ───────────────────────────────────────────────────────
+
+/**
+ * Generate a formatted plain-text (.txt) forensic report string.
+ */
+export function generateTxtReport(data) {
+  const sep = '═'.repeat(60);
+  const dash = '─'.repeat(60);
+  const lines = [];
+
+  lines.push(sep);
+  lines.push('  V.O.I.D. — FORENSIC INVESTIGATION REPORT');
+  lines.push('  Volatile Output Investigation & Discovery');
+  lines.push(sep);
+  lines.push('');
+  lines.push(`  Generated:  ${data.generatedAtReadable}`);
+  lines.push(`  Version:    ${data.version}`);
+  lines.push('');
+  lines.push(dash);
+  lines.push('  ANALYST & TARGET');
+  lines.push(dash);
+  lines.push(`  Analyst:           ${data.analyst}`);
+  lines.push(`  Target:            ${data.target}`);
+  lines.push(`  Target OS:         ${data.targetOS}`);
+  lines.push(`  Scenario:          ${data.scenarioName}`);
+  lines.push('');
+  lines.push(dash);
+  lines.push('  OUTCOME');
+  lines.push(dash);
+  lines.push(`  Result:            ${data.outcome}`);
+  lines.push(`  Analyst Rating:    ${data.rankTitle} ${data.rankStars}`);
+  lines.push(`  Rank:              ${data.rank}`);
+  lines.push(`  Final Score:       ${data.score} / ${data.maxScore}`);
+  lines.push('');
+  lines.push(dash);
+  lines.push('  TIMELINE');
+  lines.push(dash);
+  lines.push(`  Time Elapsed:      ${data.timeElapsedFormatted} / ${data.timeTotalFormatted}`);
+  lines.push(`  Encryption at End: ${data.encryptionPercent}%`);
+  lines.push(`  Files Encrypted:   ${data.filesEncrypted} / ${data.filesTotal}`);
+  lines.push('');
+  lines.push(dash);
+  lines.push('  INVESTIGATION RESULTS');
+  lines.push(dash);
+  const f = data.findings;
+  lines.push(`  Malware Identified:  ${f.malwareIdentified ? `YES — ${f.malwareName} (PID ${f.malwarePID})` : 'NO'}`);
+  lines.push(`  C2 Server Found:     ${f.c2Found ? 'YES — External C2 connections detected' : 'NO'}`);
+  lines.push(`  Injected Code:       ${f.injectedCodeFound ? 'YES — RWX memory detected via malfind' : 'NO'}`);
+  lines.push(`  AES Key Recovered:   ${f.aesKeyRecovered ? `YES — ${f.aesKey}` : 'NO — Key lost'}`);
+  lines.push(`  Ransomware Killed:   ${f.ransomwareKilled ? 'YES — Process terminated' : 'NO — Still running'}`);
+  lines.push('');
+  lines.push(dash);
+  lines.push('  KNOWLEDGE ASSESSMENT');
+  lines.push(dash);
+  lines.push(`  Pre-Quiz Score:      ${data.preQuizScore} / 3`);
+  lines.push(`  Post-Quiz Score:     ${data.postQuizScore} / 3`);
+  const deltaSign = data.knowledgeDelta > 0 ? '+' : '';
+  lines.push(`  Knowledge Delta:     ${deltaSign}${data.knowledgeDelta}`);
+  lines.push('');
+  lines.push(dash);
+  lines.push('  PENALTIES');
+  lines.push(dash);
+  lines.push(`  Innocent Kills:    ${data.innocentKills} (-${data.innocentKillsPenalty} pts)`);
+  lines.push(`  Hints Used:        ${data.hintsUsed}`);
+  lines.push('');
+  lines.push(dash);
+  lines.push('  SCORE BREAKDOWN');
+  lines.push(dash);
+  for (const e of data.scoreBreakdown) {
+    const sign = e.points >= 0 ? '+' : '';
+    lines.push(`  ${sign}${String(e.points).padStart(4)}  ${e.reason}`);
+  }
+  lines.push(`  ${'─'.repeat(30)}`);
+  lines.push(`  TOTAL:  ${data.score} / ${data.maxScore}`);
+  lines.push('');
+  lines.push(dash);
+  lines.push(`  COMMANDS EXECUTED (${data.commandCount})`);
+  lines.push(dash);
+  if (data.actionsLog.length === 0) {
+    lines.push('  (none)');
+  } else {
+    for (const a of data.actionsLog) {
+      lines.push(`  [${a.timestamp}]  ${a.details}`);
+    }
+  }
+  lines.push('');
+  lines.push(dash);
+  lines.push('  FORENSIC INSIGHTS UNLOCKED');
+  lines.push(dash);
+  if (data.lessonsUnlocked.length === 0) {
+    lines.push('  (none)');
+  } else {
+    for (const l of data.lessonsUnlocked) {
+      lines.push(`  * ${l.title}`);
+      lines.push(`    ${l.text}`);
+      lines.push(`    Source: ${l.source}`);
+      lines.push('');
+    }
+  }
+  lines.push(dash);
+  lines.push('  LEARNING NOTES');
+  lines.push(dash);
+  for (const note of data.learningNotes) {
+    lines.push(`  -> ${note}`);
+  }
+  lines.push('');
+  lines.push(sep);
+  lines.push('  END OF REPORT');
+  lines.push(sep);
+
+  return lines.join('\n');
+}
+
+/**
+ * Generate a structured JSON report string.
+ */
+export function generateJsonReport(data) {
+  return JSON.stringify(data, null, 2);
+}
+
+/**
+ * Trigger a file download in the browser.
+ * Uses a hidden anchor element with explicit download attribute.
+ */
+export function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+
+  // Use requestAnimationFrame to ensure the element is fully in the DOM
+  // before triggering the click — prevents UUID-named downloads in some browsers
+  requestAnimationFrame(() => {
+    a.click();
+    // Defer cleanup to allow the download to start
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 150);
+  });
+}
 
 /**
  * Apply speed bonus (call once at game end).

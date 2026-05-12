@@ -804,6 +804,52 @@ body::after {
 }
 
 /* ============================================================
+   REPORT EXPORT BUTTONS
+   ============================================================ */
+.report-export-bar {
+  display: flex;
+  gap: 14px;
+  margin-top: 20px;
+  margin-bottom: 6px;
+}
+
+.report-export-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.08), rgba(0, 229, 255, 0.05));
+  border: 1px solid #2a4a3a;
+  border-radius: 6px;
+  color: var(--accent-green);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.report-export-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.18), rgba(0, 229, 255, 0.1));
+  border-color: var(--accent-green);
+  box-shadow: 0 0 16px rgba(0, 255, 136, 0.15), var(--glow-green);
+  transform: translateY(-1px);
+}
+
+.report-export-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.1);
+}
+
+.report-export-btn .export-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* ============================================================
    CONTINUE BUTTON (end-game)
    ============================================================ */
 .continue-btn-wrapper {
@@ -991,6 +1037,247 @@ body::after {
   border-color: var(--text-cyan);
   color: var(--text-cyan);
 }
+
+/* ============================================================
+   QUIZ UI
+   ============================================================ */
+.quiz-backdrop {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(4, 7, 12, 0.95);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quiz-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
+  width: 600px;
+  max-width: 95vw;
+  background: var(--bg-surface);
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(0, 229, 255, 0.1);
+  padding: 30px;
+  animation: toastIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.quiz-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.quiz-label {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-cyan);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.quiz-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.quiz-progress {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.quiz-dot {
+  width: 40px;
+  height: 4px;
+  background: #1f2937;
+  border-radius: 2px;
+  transition: all 0.3s;
+}
+
+.quiz-dot.active { background: var(--text-cyan); box-shadow: 0 0 8px var(--glow-cyan); }
+.quiz-dot.done.correct { background: var(--accent-green); }
+.quiz-dot.done.wrong { background: var(--text-red); }
+
+.quiz-question-number {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-yellow);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.quiz-question {
+  font-size: 16px;
+  color: #fff;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.quiz-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(16, 24, 39, 0.6);
+  border: 1px solid #1f2937;
+  border-radius: 6px;
+  color: #e2e8f0;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quiz-option:hover:not(.disabled) {
+  background: rgba(0, 229, 255, 0.05);
+  border-color: var(--text-cyan);
+}
+
+.quiz-option.correct {
+  background: rgba(0, 255, 136, 0.1);
+  border-color: var(--accent-green);
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.1);
+}
+
+.quiz-option.wrong {
+  background: rgba(255, 45, 45, 0.1);
+  border-color: var(--text-red);
+}
+
+.quiz-option.disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.quiz-option.correct.disabled, .quiz-option.wrong.disabled {
+  opacity: 1;
+}
+
+.quiz-option-key {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-cyan);
+  background: #0d1420;
+  border: 1px solid #1f2937;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.quiz-option.correct .quiz-option-key { color: var(--accent-green); border-color: var(--accent-green); }
+.quiz-option.wrong .quiz-option-key { color: var(--text-red); border-color: var(--text-red); }
+
+.quiz-option-text {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.quiz-explanation {
+  padding: 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  animation: fadeIn 0.3s;
+}
+
+.quiz-explanation.correct {
+  background: rgba(0, 255, 136, 0.05);
+  border-left: 3px solid var(--accent-green);
+}
+
+.quiz-explanation.wrong {
+  background: rgba(255, 45, 45, 0.05);
+  border-left: 3px solid var(--text-red);
+}
+
+.quiz-explanation-header {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.quiz-explanation.correct .quiz-explanation-header { color: var(--accent-green); }
+.quiz-explanation.wrong .quiz-explanation-header { color: var(--text-red); }
+
+.quiz-explanation-text {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.quiz-next-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--text-cyan);
+  color: #04070c;
+  border: none;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quiz-next-btn:hover {
+  background: #00ffff;
+  box-shadow: 0 0 15px var(--glow-cyan);
+}
+
+/* ============================================================
+   KNOWLEDGE ASSESSMENT GRID (REPORT)
+   ============================================================ */
+.quiz-assessment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.quiz-assessment-card {
+  background: #0d1420;
+  border: 1px solid #1f2937;
+  border-radius: 6px;
+  padding: 12px;
+  text-align: center;
+}
+
+.quiz-assessment-card.delta {
+  background: rgba(0, 229, 255, 0.05);
+  border-color: rgba(0, 229, 255, 0.2);
+}
+
+.quiz-assessment-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.quiz-assessment-value {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.quiz-assessment-value.positive { color: var(--accent-green); }
+.quiz-assessment-value.negative { color: var(--text-red); }
 
 /* ============================================================
    ANIMATIONS

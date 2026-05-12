@@ -41,6 +41,10 @@ const gameState = {
   typewriterEnabled: false,
   playerName: '',
   hints: [],
+
+  // --- Quiz Assessment ---
+  preQuizScore: 0,
+  postQuizScore: 0,
 };
 
 /**
@@ -72,6 +76,10 @@ export function initState(scenario) {
   gameState.extractedKey = false;
   gameState.killedMalicious = false;
   gameState.hints = scenario.hints ? [...scenario.hints] : [];
+
+  // Quiz scores are set by quiz.js via gameState.preQuizScore / postQuizScore
+  gameState.preQuizScore = 0;
+  gameState.postQuizScore = 0;
 }
 
 /**
