@@ -1,6 +1,6 @@
 // js/main.js — Bootstrap and Game Initialization for V.O.I.D.
 
-import gameState, { initState, logAction, ACTION_TYPES } from './gameState.js';
+import gameState, { initState, logAction, ACTION_TYPES, setDifficulty } from './gameState.js';
 import { getScenario } from './scenario.js';
 import { initTerminal, printIntro, printBlank, clearTerminal } from './terminal.js';
 import { parseCommand } from './parser.js';
@@ -16,6 +16,7 @@ import {
 import { showQuiz } from './quiz.js';
 
 let selectedOS = 'linux';
+let selectedDifficulty = 'intermediate';
 let playerName = '';
 
 const TUTORIAL_SEEN_KEY = 'void_has_seen_tutorial';
@@ -53,12 +54,21 @@ function setupMenu() {
   const startBtn = document.getElementById('btn-start');
   const tutorialBtn = document.getElementById('btn-tutorial');
   const osButtons = document.querySelectorAll('.os-btn');
+  const difficultyButtons = document.querySelectorAll('.difficulty-btn');
 
   osButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       osButtons.forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
       selectedOS = btn.dataset.os;
+    });
+  });
+
+  difficultyButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      difficultyButtons.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedDifficulty = btn.dataset.difficulty;
     });
   });
 
@@ -91,6 +101,7 @@ async function launchGame() {
 
   const scenario = getScenario(selectedOS);
   initState(scenario);
+  setDifficulty(selectedDifficulty);
   gameState.playerName = playerName;
 
   logAction(

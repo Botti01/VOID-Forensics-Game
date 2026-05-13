@@ -29,6 +29,11 @@ const gameState = {
   commandCount: 0,
   innocentKills: 0,
 
+  // --- Difficulty ---
+  difficulty: 'intermediate',
+  difficultyConfig: {},
+  difficultyFlags: {},
+
   // --- Discovery Flags ---
   foundMaliciousProcess: false,
   foundC2Connection: false,
@@ -55,6 +60,43 @@ export const ACTION_TYPES = {
   KEY_EXTRACTED: 'KEY_EXTRACTED',
   GAME_OVER: 'GAME_OVER',
 };
+
+export const DIFFICULTY_CONFIGS = {
+  beginner: {
+    label: 'Beginner',
+    encryptionRate: 2,
+    tickInterval: 20,
+    complexity: 'low',
+    masqueradeMode: false,
+  },
+  intermediate: {
+    label: 'Intermediate',
+    encryptionRate: 2,
+    tickInterval: 15,
+    complexity: 'standard',
+    masqueradeMode: false,
+  },
+  expert: {
+    label: 'Expert',
+    encryptionRate: 3,
+    tickInterval: 12,
+    complexity: 'high',
+    masqueradeMode: true,
+  },
+};
+
+export function setDifficulty(level) {
+  const config = DIFFICULTY_CONFIGS[level] || DIFFICULTY_CONFIGS.intermediate;
+  const normalized = DIFFICULTY_CONFIGS[level] ? level : 'intermediate';
+  gameState.difficulty = normalized;
+  gameState.difficultyConfig = { ...config };
+  gameState.difficultyFlags = {
+    complexity: config.complexity,
+    masqueradeMode: !!config.masqueradeMode,
+  };
+  gameState.encryptionRate = config.encryptionRate;
+  gameState.tickInterval = config.tickInterval;
+}
 
 /**
  * Initialize game state from scenario data.

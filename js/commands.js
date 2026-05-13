@@ -11,7 +11,7 @@ import { triggerLesson } from './learning.js';
 
 const COMMANDS = {
   help:     { handler: cmdHelp,     desc: "List all available forensic commands" },
-  hint:     { handler: cmdHint,     desc: "Get a contextual investigation hint (time penalty)" },
+  hint:     { handler: cmdHint,     desc: "Get a smart hint (time and encryption penalty)" },
   pslist:   { handler: cmdPslist,   desc: "List all running processes (flat view)" },
   pstree:   { handler: cmdPstree,   desc: "Display hierarchical process tree" },
   netscan:  { handler: cmdNetscan,  desc: "Show active network connections" },
@@ -23,10 +23,61 @@ const COMMANDS = {
   envars:   { handler: cmdEnvars,   desc: "Show environment variables for a process (--pid <PID>)" },
   kill:     { handler: cmdKill,     desc: "Terminate a process and its children (--pid <PID>)" },
   status:   { handler: cmdStatus,   desc: "Show current encryption %, time remaining, score" },
+  ls:       { handler: cmdLs,       desc: "List triage directory contents" },
+  cat:      { handler: cmdCat,      desc: "Read a triage text file" },
   clear:    { handler: cmdClear,    desc: "Clear the terminal screen" },
   mute:     { handler: cmdMute,     desc: "Toggle sound effects on/off" },
   tutorial: { handler: cmdTutorial, desc: "Open the interactive tutorial overlay" },
 
+};
+
+const TRIAGE_FILES = [
+  { name: 'readme.txt', size: '1.1K', note: 'Quick orientation notes' },
+  { name: 'triage_script.py', size: '3.4K', note: 'Memory triage helper' },
+  { name: 'ioc_list.txt', size: '512B', note: 'Known indicators' },
+  { name: 'capture_notes.txt', size: '928B', note: 'Analyst log excerpt' },
+];
+
+const TRIAGE_CONTENT = {
+  'readme.txt': [
+    'V.O.I.D. TRIAGE DIRECTORY',
+    '-------------------------',
+    'Purpose: quick reference during live incident response.',
+    '',
+    'Suggested flow:',
+    '1) Use pslist or pstree to identify late-starting processes.',
+    '2) Use netscan to correlate suspicious PIDs with external IPs.',
+    '3) Use malfind and yarascan to confirm injected code.',
+    '4) Run memdump before kill to preserve volatile evidence.',
+  ],
+  'triage_script.py': [
+    '# triage_script.py (mock)',
+    '# Purpose: sample workflow outline for memory triage.',
+    'print("Step 1: enumerate processes")',
+    'print("Step 2: scan for RWX memory regions")',
+    'print("Step 3: extract volatile keys before remediation")',
+  ],
+  'ioc_list.txt': [
+    'KNOWN INDICATORS (SAMPLE)',
+    '-------------------------',
+    'C2 IP: 185.141.27.93',
+    'C2 Ports: 443, 8443, 4444',
+    'Suspicious library: libshadow.so',
+    'Ransomware label: RansomVoid',
+  ],
+  'capture_notes.txt': [
+    'ANALYST NOTES (EXCERPT)',
+    '-----------------------',
+    'Volatile evidence is time-sensitive.',
+    'Kill without memdump = key loss.',
+    'Look for late-starting service processes.',
+  ],
+};
+
+const HINT_PENALTIES = {
+  beginner: { time: 15, encryption: 2 },
+  intermediate: { time: 30, encryption: 5 },
+  expert: { time: 45, encryption: 10 },
 };
 
 /**
@@ -82,27 +133,66 @@ function cmdHelp() {
 }
 
 function cmdHint() {
-  const hintIndex = gameState.hintsUsed;
-  if (hintIndex >= gameState.hints.length) {
-    printWarning("No more hints available.");
+  if (gameState.gamePhase !== 'playing') {
+    printWarning('Hints are available during an active investigation.');
     return;
   }
-  const hint = gameState.hints[hintIndex];
-  const penalty = hint.cost;
+
+  const maxHints = gameState.hints.length > 0 ? gameState.hints.length : 3;
+  if (gameState.hintsUsed >= maxHints) {
+    printWarning('No more hints available.');
+    return;
+  }
+
+  const penalty = getHintPenalty();
+  const hintText = getSmartHint();
+
   gameState.hintsUsed++;
-  gameState.timeRemaining = Math.max(0, gameState.timeRemaining - penalty);
-  removeScore(penalty);
+  gameState.timeRemaining = Math.max(0, gameState.timeRemaining - penalty.time);
+  gameState.encryptionProgress = Math.min(100, gameState.encryptionProgress + penalty.encryption);
 
   logAction(
     ACTION_TYPES.HINT_USED,
-    `Hint ${hintIndex + 1} used (time penalty: -${penalty}s)`,
+    `Smart hint used (penalty: -${penalty.time}s, +${penalty.encryption}% encryption)`,
     'warning'
   );
 
   printBlank();
-  printWarning(`[HINT ${hintIndex + 1}/${gameState.hints.length}] (Time penalty: -${penalty}s)`);
-  printLine(`  ${hint.text}`, 'hint-text');
+  printError(`[HINT PENALTY] -${penalty.time}s time, +${penalty.encryption}% encryption`);
+  printWarning(`[HINT ${gameState.hintsUsed}/${maxHints}] ${hintText}`);
   printBlank();
+}
+
+function getHintPenalty() {
+  const level = gameState.difficulty || 'intermediate';
+  return HINT_PENALTIES[level] || HINT_PENALTIES.intermediate;
+}
+
+function getSmartHint() {
+  const suspectPid = gameState.maliciousPID || gameState.suspiciousPIDs[0] || '<PID>';
+
+  if (!gameState.foundMaliciousProcess) {
+    if (!gameState.foundC2Connection && !gameState.foundInjectedCode) {
+      return "Start with 'pslist' or 'pstree' to spot late-starting processes.";
+    }
+    if (!gameState.foundC2Connection) {
+      return "Run 'netscan' to identify external C2 connections and suspicious PIDs.";
+    }
+    if (!gameState.foundInjectedCode) {
+      return "Run 'malfind' to detect RWX memory regions that indicate injection.";
+    }
+    return `Use 'yarascan --pid ${suspectPid}' to confirm the malicious process.`;
+  }
+
+  if (!gameState.extractedKey) {
+    return `Use 'memdump --pid ${gameState.maliciousPID}' to extract the AES key.`;
+  }
+
+  if (!gameState.killedMalicious) {
+    return `Terminate the ransomware with 'kill --pid ${gameState.maliciousPID}'.`;
+  }
+
+  return "Core objectives are complete. Use 'status' to review or wait for the report.";
 }
 
 function cmdPslist() {
@@ -490,6 +580,43 @@ function cmdStatus() {
   printLine(`  Commands Executed:  ${gameState.commandCount}`);
   printLine(`  Hints Used:         ${gameState.hintsUsed}`);
   printSeparator();
+  printBlank();
+}
+
+function cmdLs() {
+  printBlank();
+  printHeader('Triage Directory');
+  printSeparator();
+  printLine('Name                 Size    Notes', 'table-header');
+  printLine('-------------------- ------- ------------------------------', 'dim');
+  for (const f of TRIAGE_FILES) {
+    const name = f.name.padEnd(20);
+    const size = f.size.padEnd(7);
+    printLine(`${name} ${size} ${f.note}`);
+  }
+  printBlank();
+}
+
+function cmdCat(args) {
+  const target = (args[0] || '').trim();
+  if (!target) {
+    printError("Missing file name. Usage: cat <file>");
+    return;
+  }
+
+  const normalized = target.replace(/^\.\//, '');
+  const content = TRIAGE_CONTENT[normalized];
+  if (!content) {
+    printError(`File not found: ${normalized}`);
+    return;
+  }
+
+  printBlank();
+  printHeader(`File: ${normalized}`);
+  printSeparator();
+  for (const line of content) {
+    printLine(line);
+  }
   printBlank();
 }
 
