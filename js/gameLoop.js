@@ -1,6 +1,6 @@
 // js/gameLoop.js — Timer, Encryption Progression, and Alert System for V.O.I.D.
 
-import gameState, { advanceEncryption } from './gameState.js';
+import gameState, { advanceEncryption, logAction, ACTION_TYPES } from './gameState.js';
 import { printAlert, printBlank, printError, printHeader, printInfo, lockInput } from './terminal.js';
 import { playAlert } from './audio.js';
 // Note: generateReport() is kept in scoring.js but no longer called here.
@@ -72,6 +72,11 @@ export function stopGameLoop() {
 function triggerGameOver() {
   stopGameLoop();
   gameState.gamePhase = 'lost';
+
+  const reason = gameState.encryptionProgress >= 100
+    ? 'Investigation concluded: GAME OVER (encryption completed)'
+    : 'Investigation concluded: GAME OVER (time expired)';
+  logAction(ACTION_TYPES.GAME_OVER, reason, 'critical');
 
   printBlank();
   printError("═══════════════════════════════════════════════════");

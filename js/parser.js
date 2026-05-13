@@ -3,7 +3,7 @@
 
 import { executeCommand } from './commands.js';
 import { printError } from './terminal.js';
-import gameState, { logAction } from './gameState.js';
+import gameState from './gameState.js';
 
 /**
  * Parse and execute a raw command string.
@@ -52,7 +52,7 @@ export function parseCommand(raw) {
     }
   }
 
-  logAction(command, raw);
+  gameState.commandCount++;
   executeCommand(command, args, flags);
 }
 

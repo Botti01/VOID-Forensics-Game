@@ -1,6 +1,6 @@
 // js/main.js — Bootstrap and Game Initialization for V.O.I.D.
 
-import gameState, { initState } from './gameState.js';
+import gameState, { initState, logAction, ACTION_TYPES } from './gameState.js';
 import { getScenario } from './scenario.js';
 import { initTerminal, printIntro, printBlank, clearTerminal } from './terminal.js';
 import { parseCommand } from './parser.js';
@@ -18,11 +18,40 @@ import { showQuiz } from './quiz.js';
 let selectedOS = 'linux';
 let playerName = '';
 
+const TUTORIAL_SEEN_KEY = 'void_has_seen_tutorial';
+const TUTORIAL_STEPS = [
+  {
+    title: 'Step 1 - The Terminal HUD',
+    items: [
+      'Type commands and press Enter to execute them.',
+      'Use <code>help</code> to list all forensic tools and hints.',
+      'Use Arrow Up/Down for command history and <code>clear</code> to reset the screen.',
+    ],
+  },
+  {
+    title: 'Step 2 - The Live Threat',
+    items: [
+      'The timer in the HUD shows how long you have before encryption completes.',
+      'Encryption progress ticks every 15 seconds — files are actively being locked.',
+      'Your score updates as you identify evidence and correct malicious activity.',
+    ],
+  },
+  {
+    title: 'Step 3 - The Golden Rule (Order of Volatility)',
+    items: [
+      'Always extract the AES key from memory before terminating the malware.',
+      'Run <code>memdump --pid &lt;PID&gt;</code> to capture volatile evidence.',
+      'Only then use <code>kill --pid &lt;PID&gt;</code> or the key is lost forever.',
+    ],
+  },
+];
+
 document.addEventListener('DOMContentLoaded', () => { setupMenu(); });
 
 function setupMenu() {
   const nameInput = document.getElementById('player-name');
   const startBtn = document.getElementById('btn-start');
+  const tutorialBtn = document.getElementById('btn-tutorial');
   const osButtons = document.querySelectorAll('.os-btn');
 
   osButtons.forEach(btn => {
@@ -45,6 +74,14 @@ function setupMenu() {
   startBtn.addEventListener('click', () => {
     if (playerName.length > 0) launchGame();
   });
+
+  if (tutorialBtn) {
+    tutorialBtn.addEventListener('click', () => showTutorialOverlay({ mode: 'menu' }));
+  }
+
+  document.addEventListener('void:tutorial', () => {
+    showTutorialOverlay({ mode: 'command' });
+  });
 }
 
 async function launchGame() {
@@ -56,8 +93,11 @@ async function launchGame() {
   initState(scenario);
   gameState.playerName = playerName;
 
-  // Show pre-quiz before entering the game
-  await showQuiz('pre');
+  logAction(
+    ACTION_TYPES.SESSION_START,
+    `Investigation initialized for ${scenario.meta.target} (${scenario.meta.os})`,
+    'info'
+  );
 
   // Hide all views, show game
   document.getElementById('start-menu').classList.add('hidden');
@@ -83,7 +123,7 @@ async function launchGame() {
   document.getElementById('learning-toggle').classList.remove('visible');
 
   // Clean up stale UI
-  document.querySelectorAll('.lesson-toast, .toast-backdrop, .continue-btn-wrapper, .report-backdrop, .report-modal').forEach(el => el.remove());
+  document.querySelectorAll('.lesson-toast, .toast-backdrop, .continue-btn-wrapper, .report-backdrop, .report-modal, .tutorial-backdrop, .tutorial-modal').forEach(el => el.remove());
 
   // Re-enable input
   const termInput = document.getElementById('terminal-input');
@@ -122,7 +162,7 @@ function returnToMenu() {
   document.getElementById('game-view').classList.add('hidden');
   document.getElementById('results-page').classList.add('hidden');
   document.getElementById('start-menu').classList.remove('hidden');
-  document.querySelectorAll('.lesson-toast, .toast-backdrop, .report-backdrop, .report-modal').forEach(t => t.remove());
+  document.querySelectorAll('.lesson-toast, .toast-backdrop, .report-backdrop, .report-modal, .tutorial-backdrop, .tutorial-modal').forEach(t => t.remove());
   document.getElementById('player-name').focus();
 }
 
@@ -157,12 +197,142 @@ async function startIntroSequence(scenario) {
   ], () => {});
 
   await printIntro(scenario.meta.briefing, () => {
-    gameState.gamePhase = 'playing';
-    startGameLoop(updateHUD, onGameOver);
-    updateHUD();
-    const input = document.getElementById('terminal-input');
-    if (input) input.focus();
+    if (!hasSeenTutorial()) {
+      showTutorialOverlay({ mode: 'auto', onClose: beginGameplay });
+      return;
+    }
+    beginGameplay();
   });
+}
+
+function beginGameplay() {
+  gameState.gamePhase = 'playing';
+  startGameLoop(updateHUD, onGameOver);
+  updateHUD();
+  const input = document.getElementById('terminal-input');
+  if (input) input.focus();
+}
+
+function hasSeenTutorial() {
+  try {
+    return localStorage.getItem(TUTORIAL_SEEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markTutorialSeen() {
+  try {
+    localStorage.setItem(TUTORIAL_SEEN_KEY, '1');
+  } catch {
+    /* localStorage unavailable */
+  }
+}
+
+function showTutorialOverlay(options = {}) {
+  const mode = options.mode || 'menu';
+  const onClose = options.onClose || null;
+
+  if (document.querySelector('.tutorial-modal')) return;
+
+  const shouldPause = mode === 'command' && gameState.gamePhase === 'playing';
+  let resumeAfter = false;
+  if (shouldPause) {
+    stopGameLoop();
+    resumeAfter = true;
+  }
+
+  const input = document.getElementById('terminal-input');
+  const prevInputState = input ? { disabled: input.disabled, placeholder: input.placeholder } : null;
+  if (input) {
+    input.disabled = true;
+    input.placeholder = 'Tutorial active.';
+  }
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'tutorial-backdrop';
+  document.body.appendChild(backdrop);
+
+  const modal = document.createElement('div');
+  modal.className = 'tutorial-modal';
+
+  let current = 0;
+
+  const closeTutorial = () => {
+    markTutorialSeen();
+    backdrop.remove();
+    modal.remove();
+    if (input && prevInputState) {
+      input.disabled = prevInputState.disabled;
+      input.placeholder = prevInputState.placeholder;
+    }
+    if (onClose) onClose();
+    if (resumeAfter) {
+      startGameLoop(updateHUD, onGameOver);
+      updateHUD();
+      if (input) input.focus();
+    }
+  };
+
+  const render = () => {
+    const step = TUTORIAL_STEPS[current];
+    const isFirst = current === 0;
+    const isLast = current === TUTORIAL_STEPS.length - 1;
+    const primaryLabel = isLast
+      ? (mode === 'auto' ? 'START INVESTIGATION' : mode === 'command' ? 'RESUME INVESTIGATION' : 'CLOSE TUTORIAL')
+      : 'NEXT';
+
+    modal.innerHTML = `
+      <div class="tutorial-label">ONBOARDING SEQUENCE</div>
+      <div class="tutorial-title">Interactive Walkthrough</div>
+      <div class="tutorial-subtitle">Quick guidance before the live investigation begins.</div>
+      <div class="tutorial-progress">
+        ${TUTORIAL_STEPS.map((_, i) => `
+          <div class="tutorial-dot ${i === current ? 'active' : ''} ${i < current ? 'done' : ''}"></div>
+        `).join('')}
+      </div>
+
+      <div class="tutorial-body">
+        <div class="tutorial-step-title">${step.title}</div>
+        <ul class="tutorial-list">${step.items.map(item => `<li>${item}</li>`).join('')}</ul>
+      </div>
+
+      <div class="tutorial-footer">
+        <button class="tutorial-btn ${isFirst ? 'disabled' : ''}" data-action="prev" ${isFirst ? 'disabled' : ''}>PREVIOUS</button>
+        <button class="tutorial-btn" data-action="skip">SKIP TUTORIAL</button>
+        <button class="tutorial-btn primary" data-action="next">${primaryLabel}</button>
+      </div>
+    `;
+
+    const prevBtn = modal.querySelector('[data-action="prev"]');
+    const nextBtn = modal.querySelector('[data-action="next"]');
+    const skipBtn = modal.querySelector('[data-action="skip"]');
+
+    if (prevBtn && !isFirst) {
+      prevBtn.addEventListener('click', () => {
+        current = Math.max(0, current - 1);
+        render();
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        if (isLast) {
+          closeTutorial();
+          return;
+        }
+        current = Math.min(TUTORIAL_STEPS.length - 1, current + 1);
+        render();
+      });
+    }
+
+    if (skipBtn) {
+      skipBtn.addEventListener('click', () => closeTutorial());
+    }
+  };
+
+  document.body.appendChild(modal);
+  render();
 }
 
 function handleCommand(raw) {
@@ -188,7 +358,7 @@ function showEndGameUI() {
 
   // Wait for any active lesson toast, then show post-quiz, then report
   waitForToastDismiss()
-    .then(() => showQuiz('post'))
+    .then(() => showQuiz())
     .then(() => showReportModal());
 }
 
@@ -231,10 +401,20 @@ function showReportModal() {
     scoreBreakdownHTML += row(e.reason, sign + e.points, cls);
   }
 
-  // Commands executed HTML
-  let commandsHTML = '';
+  // Audit trail HTML
+  let auditHTML = '';
   for (const a of gameState.actionsLog) {
-    commandsHTML += `<div class="report-cmd">[${a.timestamp}]  ${a.details || a.action}</div>`;
+    const sevValue = a.severity || 'info';
+    const sev = `sev-${sevValue}`;
+    const sevLabel = sevValue.toUpperCase();
+    auditHTML += `
+      <div class="audit-row">
+        <span class="audit-time">[${a.timestamp}]</span>
+        <span class="audit-type">${a.actionType}</span>
+        <span class="audit-desc">${a.description}</span>
+        <span class="audit-badge ${sev}">${sevLabel}</span>
+      </div>
+    `;
   }
 
   // Learning notes HTML
@@ -244,6 +424,9 @@ function showReportModal() {
   if (!gameState.extractedKey) learningHTML += `<div class="report-tip">\u2192 Always run 'memdump --pid &lt;PID&gt;' BEFORE killing a process.</div>`;
   if (gameState.innocentKills > 0) learningHTML += `<div class="report-tip">\u2192 Verify a process is malicious before terminating it.</div>`;
   if (!learningHTML) learningHTML = `<div class="report-tip" style="color:var(--accent-green)">\u2713 Excellent investigation \u2014 no critical mistakes!</div>`;
+
+  const postScore = gameState.postQuizScore;
+  const postScoreClass = postScore === 3 ? 'ok' : postScore >= 1 ? 'warn' : 'fail';
 
   modal.innerHTML = `
     <h2>V.O.I.D. \u2014 FORENSIC INVESTIGATION REPORT</h2>
@@ -291,8 +474,14 @@ function showReportModal() {
         </div>
 
         <div class="report-section">
-          <div class="report-section-title">Commands Executed (${gameState.commandCount})</div>
-          <div class="report-cmds-list">${commandsHTML || '<div class="report-cmd">No commands executed.</div>'}</div>
+          <div class="report-section-title">Chain of Custody & Audit Trail</div>
+          <div class="audit-legend">
+            <span class="audit-legend-item"><span class="audit-badge sev-info">INFO</span><span class="audit-legend-label">Evidence access</span></span>
+            <span class="audit-legend-item"><span class="audit-badge sev-success">SUCCESS</span><span class="audit-legend-label">Discovery</span></span>
+            <span class="audit-legend-item"><span class="audit-badge sev-warning">WARNING</span><span class="audit-legend-label">Risky action</span></span>
+            <span class="audit-legend-item"><span class="audit-badge sev-critical">CRITICAL</span><span class="audit-legend-label">Incident impact</span></span>
+          </div>
+          <div class="audit-log">${auditHTML || '<div class="audit-empty">No audit events recorded.</div>'}</div>
         </div>
 
         <div class="report-section">
@@ -304,19 +493,9 @@ function showReportModal() {
 
     <div class="report-section" style="margin-top:18px">
       <div class="report-section-title">Knowledge Assessment</div>
-      <div class="quiz-assessment-grid">
-        <div class="quiz-assessment-card">
-          <div class="quiz-assessment-label">Pre-Quiz</div>
-          <div class="quiz-assessment-value">${gameState.preQuizScore} / 3</div>
-        </div>
-        <div class="quiz-assessment-card">
-          <div class="quiz-assessment-label">Post-Quiz</div>
-          <div class="quiz-assessment-value">${gameState.postQuizScore} / 3</div>
-        </div>
-        <div class="quiz-assessment-card delta">
-          <div class="quiz-assessment-label">Knowledge Delta</div>
-          <div class="quiz-assessment-value ${(gameState.postQuizScore - gameState.preQuizScore) > 0 ? 'positive' : (gameState.postQuizScore - gameState.preQuizScore) < 0 ? 'negative' : ''}">${(gameState.postQuizScore - gameState.preQuizScore) > 0 ? '+' : ''}${gameState.postQuizScore - gameState.preQuizScore}</div>
-        </div>
+      <div class="quiz-score-line">
+        <span class="quiz-score-label">Post-Investigation Verification Score</span>
+        <span class="quiz-score-badge ${postScoreClass}">${postScore}/3 Correct</span>
       </div>
     </div>
 

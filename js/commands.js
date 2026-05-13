@@ -1,6 +1,6 @@
 // js/commands.js — All forensic command implementations for V.O.I.D.
 
-import gameState, { getProcess, getChildren, killProcess } from './gameState.js';
+import gameState, { getProcess, getChildren, killProcess, logAction, ACTION_TYPES } from './gameState.js';
 import { printLine, printError, printSuccess, printWarning, printHeader, printInfo, printBlank, printSeparator } from './terminal.js';
 import { addScore, removeScore } from './scoring.js';
 import { triggerLesson } from './learning.js';
@@ -25,6 +25,7 @@ const COMMANDS = {
   status:   { handler: cmdStatus,   desc: "Show current encryption %, time remaining, score" },
   clear:    { handler: cmdClear,    desc: "Clear the terminal screen" },
   mute:     { handler: cmdMute,     desc: "Toggle sound effects on/off" },
+  tutorial: { handler: cmdTutorial, desc: "Open the interactive tutorial overlay" },
 
 };
 
@@ -92,6 +93,12 @@ function cmdHint() {
   gameState.timeRemaining = Math.max(0, gameState.timeRemaining - penalty);
   removeScore(penalty);
 
+  logAction(
+    ACTION_TYPES.HINT_USED,
+    `Hint ${hintIndex + 1} used (time penalty: -${penalty}s)`,
+    'warning'
+  );
+
   printBlank();
   printWarning(`[HINT ${hintIndex + 1}/${gameState.hints.length}] (Time penalty: -${penalty}s)`);
   printLine(`  ${hint.text}`, 'hint-text');
@@ -99,6 +106,7 @@ function cmdHint() {
 }
 
 function cmdPslist() {
+  logAction(ACTION_TYPES.EVIDENCE_ACCESS, 'Executed pslist (process snapshot)', 'info');
   printBlank();
   printHeader("Volatility 2.6.1 — pslist");
   printBlank();
@@ -125,6 +133,7 @@ function cmdPslist() {
 }
 
 function cmdPstree() {
+  logAction(ACTION_TYPES.EVIDENCE_ACCESS, 'Executed pstree (process hierarchy)', 'info');
   printBlank();
   printHeader("Volatility 2.6.1 — pstree");
   printBlank();
@@ -165,6 +174,7 @@ function cmdPstree() {
 }
 
 function cmdNetscan() {
+  logAction(ACTION_TYPES.EVIDENCE_ACCESS, 'Executed netscan (network connections)', 'info');
   printBlank();
   printHeader("Volatility 2.6.1 — netscan");
   printBlank();
@@ -190,6 +200,9 @@ function cmdNetscan() {
   if (suspCount > 0) {
     printBlank();
     printWarning(`[!] ${suspCount} suspicious connection(s) detected to external hosts.`);
+    if (!gameState.foundC2Connection) {
+      logAction(ACTION_TYPES.DISCOVERY, 'Identified external C2 connections', 'success');
+    }
     gameState.foundC2Connection = true;
     addScore(100, 'Identified C2 connections');
     triggerLesson('c2_connection');
@@ -198,6 +211,7 @@ function cmdNetscan() {
 }
 
 function cmdMalfind() {
+  logAction(ACTION_TYPES.EVIDENCE_ACCESS, 'Executed malfind (memory injection scan)', 'info');
   printBlank();
   printHeader("Volatility 2.6.1 — malfind");
   printBlank();
@@ -223,6 +237,9 @@ function cmdMalfind() {
 
   if (found) {
     printWarning("[!] Injected code detected. Use 'yarascan --pid <PID>' or 'memdump --pid <PID>' for deeper analysis.");
+    if (!gameState.foundInjectedCode) {
+      logAction(ACTION_TYPES.DISCOVERY, 'Detected injected code via RWX memory regions', 'success');
+    }
     gameState.foundInjectedCode = true;
     addScore(150, 'Detected injected code via malfind');
     triggerLesson('rwx_memory');
@@ -237,6 +254,7 @@ function cmdYarascan(args, flags) {
   if (pid === null) return;
 
   const proc = getProcess(pid);
+  logAction(ACTION_TYPES.EVIDENCE_ACCESS, `Executed yarascan on PID ${pid} (${proc.name})`, 'info');
   printBlank();
   printHeader(`Volatility 2.6.1 — yarascan (PID: ${pid})`);
   printBlank();
@@ -255,6 +273,9 @@ function cmdYarascan(args, flags) {
     }
 
     if (proc.isMalicious) {
+      if (!gameState.foundMaliciousProcess) {
+        logAction(ACTION_TYPES.DISCOVERY, `Identified malicious process: ${proc.name} (PID: ${pid})`, 'success');
+      }
       gameState.foundMaliciousProcess = true;
       addScore(100, `Identified malicious process: ${proc.name} (PID: ${pid})`);
     }
@@ -268,6 +289,7 @@ function cmdMemdump(args, flags) {
   if (pid === null) return;
 
   const proc = getProcess(pid);
+  logAction(ACTION_TYPES.EVIDENCE_ACCESS, `Executed memdump on PID ${pid} (${proc.name})`, 'info');
   printBlank();
   printHeader(`Memory Dump — ${proc.name} (PID: ${pid})`);
   printBlank();
@@ -282,6 +304,9 @@ function cmdMemdump(args, flags) {
     }
 
     if (proc.isMalicious) {
+      if (!gameState.extractedKey) {
+        logAction(ACTION_TYPES.KEY_EXTRACTED, `Extracted AES key from ${proc.name} (PID: ${pid})`, 'success');
+      }
       gameState.extractedKey = true;
       addScore(200, 'Extracted AES encryption key from memory');
       printBlank();
@@ -299,6 +324,7 @@ function cmdHandles(args, flags) {
   if (pid === null) return;
 
   const proc = getProcess(pid);
+  logAction(ACTION_TYPES.EVIDENCE_ACCESS, `Executed handles on PID ${pid} (${proc.name})`, 'info');
   printBlank();
   printHeader(`Handles — ${proc.name} (PID: ${pid})`);
   printBlank();
@@ -330,6 +356,7 @@ function cmdDlllist(args, flags) {
   if (pid === null) return;
 
   const proc = getProcess(pid);
+  logAction(ACTION_TYPES.EVIDENCE_ACCESS, `Executed dlllist on PID ${pid} (${proc.name})`, 'info');
   printBlank();
   printHeader(`DLL List — ${proc.name} (PID: ${pid})`);
   printBlank();
@@ -357,6 +384,7 @@ function cmdEnvars(args, flags) {
   if (pid === null) return;
 
   const proc = getProcess(pid);
+  logAction(ACTION_TYPES.EVIDENCE_ACCESS, `Executed envars on PID ${pid} (${proc.name})`, 'info');
   printBlank();
   printHeader(`Environment Variables — ${proc.name} (PID: ${pid})`);
   printBlank();
@@ -390,6 +418,15 @@ function cmdKill(args, flags) {
     return;
   }
 
+  const childCount = Math.max(0, result.killed.length - 1);
+  let killSeverity = 'warning';
+  if (result.wasInnocent) killSeverity = 'critical';
+  if (result.wasMalicious) killSeverity = 'success';
+  const killDesc = childCount > 0
+    ? `Terminated ${proc.name} (PID: ${pid}) and ${childCount} child process(es)`
+    : `Terminated ${proc.name} (PID: ${pid})`;
+  logAction(ACTION_TYPES.PROCESS_KILLED, killDesc, killSeverity);
+
   if (result.wasMalicious) {
     printSuccess(`[✓] Terminated malicious process: ${proc.name} (PID: ${pid})`);
     addScore(200, `Terminated ransomware process (PID: ${pid})`);
@@ -406,6 +443,7 @@ function cmdKill(args, flags) {
       printSuccess(`  AES Key Recovered: ${gameState.aesKey}`);
       printSuccess(`  Encryption halted at: ${gameState.encryptionProgress}%`);
       gameState.gamePhase = 'won';
+      logAction(ACTION_TYPES.GAME_OVER, 'Investigation concluded: MISSION SUCCESS', 'success');
       printBlank();
       // Report is shown via modal popup in main.js
     } else {
@@ -416,6 +454,7 @@ function cmdKill(args, flags) {
       printWarning("  Encrypted files cannot be decrypted.");
       printWarning("═══════════════════════════════════════════════");
       gameState.gamePhase = 'lost';
+      logAction(ACTION_TYPES.GAME_OVER, 'Investigation concluded: PARTIAL SUCCESS (key not recovered)', 'critical');
       triggerLesson('killed_before_dump');
       printBlank();
       // Report is shown via modal popup in main.js
@@ -467,4 +506,12 @@ function require_terminal() { return { clearTerminal: clearFn || (() => {}) }; }
 function cmdMute() {
   gameState.soundEnabled = !gameState.soundEnabled;
   printInfo(`Sound effects: ${gameState.soundEnabled ? 'ON' : 'OFF'}`);
+}
+
+function cmdTutorial() {
+  if (gameState.gamePhase !== 'playing') {
+    printWarning('Tutorial is available during an active investigation.');
+    return;
+  }
+  document.dispatchEvent(new CustomEvent('void:tutorial', { detail: { source: 'command' } }));
 }

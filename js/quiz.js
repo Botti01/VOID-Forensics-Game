@@ -1,48 +1,9 @@
-// js/quiz.js — Pre/Post Quiz System for V.O.I.D.
-// Measures knowledge baseline (pre) and learning outcome (post).
+// js/quiz.js — Post-Investigation Quiz System for V.O.I.D.
+// Measures learning outcome after the investigation.
 
 import gameState from './gameState.js';
 
 // ── Question Bank ──────────────────────────────────────────────────────────────
-
-const PRE_QUIZ_QUESTIONS = [
-  {
-    id: 'pre_1',
-    question: 'What is the "Order of Volatility" in digital forensics?',
-    options: [
-      { key: 'A', text: 'A ranking of how quickly different types of evidence can be lost or altered' },
-      { key: 'B', text: 'The order in which forensic tools should be installed on a system' },
-      { key: 'C', text: 'A list of volatile chemicals used in data recovery' },
-      { key: 'D', text: 'The sequence for presenting evidence in court' },
-    ],
-    correct: 'A',
-    explanation: 'The Order of Volatility (RFC 3227) ranks evidence sources by how quickly they disappear — from CPU registers and RAM (most volatile) to archival media (least volatile). Analysts must collect the most volatile evidence first.',
-  },
-  {
-    id: 'pre_2',
-    question: 'What does an RWX (Read-Write-Execute) memory region in a process typically indicate?',
-    options: [
-      { key: 'A', text: 'Normal memory allocation for application data' },
-      { key: 'B', text: 'A memory-mapped file from disk' },
-      { key: 'C', text: 'Potentially injected or self-modifying code' },
-      { key: 'D', text: 'A shared library loaded by the operating system' },
-    ],
-    correct: 'C',
-    explanation: 'Legitimate executables map code as read-execute (R-X) and data as read-write (RW-). A region that is simultaneously Read-Write-Execute (RWX) is a strong indicator of code injection, shellcode, or process hollowing.',
-  },
-  {
-    id: 'pre_3',
-    question: 'What is the primary purpose of dumping a process\'s memory during incident response?',
-    options: [
-      { key: 'A', text: 'To increase the available system RAM' },
-      { key: 'B', text: 'To capture volatile evidence such as encryption keys, injected code, or C2 addresses before they are lost' },
-      { key: 'C', text: 'To delete the malicious process from memory' },
-      { key: 'D', text: 'To back up the process for later execution' },
-    ],
-    correct: 'B',
-    explanation: 'Memory dumps capture volatile artifacts (decryption keys, network connections, injected payloads) that exist only in RAM. Once a process is terminated, this evidence is permanently destroyed.',
-  },
-];
 
 const POST_QUIZ_QUESTIONS = [
   {
@@ -87,17 +48,12 @@ const POST_QUIZ_QUESTIONS = [
 
 /**
  * Show a quiz modal and return a Promise that resolves with the score (0-3).
- * @param {'pre' | 'post'} phase — which quiz to show
  * @returns {Promise<number>} — score (number of correct answers)
  */
-export function showQuiz(phase) {
-  const questions = phase === 'pre' ? PRE_QUIZ_QUESTIONS : POST_QUIZ_QUESTIONS;
-  const title = phase === 'pre'
-    ? 'PRE-INVESTIGATION ASSESSMENT'
-    : 'POST-INVESTIGATION ASSESSMENT';
-  const subtitle = phase === 'pre'
-    ? 'Test your baseline knowledge before the investigation begins.'
-    : 'Verify what you learned during the investigation.';
+export function showQuiz() {
+  const questions = POST_QUIZ_QUESTIONS;
+  const title = 'POST-INVESTIGATION VERIFICATION';
+  const subtitle = 'Confirm what you learned during the investigation.';
 
   return new Promise((resolve) => {
     // Clean up any previous quiz
@@ -154,7 +110,7 @@ export function showQuiz(phase) {
             <div class="quiz-explanation-header">${answers[currentQ] === q.correct ? '✓ Correct!' : '✗ Incorrect'}</div>
             <div class="quiz-explanation-text">${q.explanation}</div>
           </div>
-          <button class="quiz-next-btn">${isLast ? '▶ ' + (phase === 'pre' ? 'BEGIN INVESTIGATION' : 'VIEW REPORT') : '▶ NEXT QUESTION'}</button>
+          <button class="quiz-next-btn">${isLast ? '▶ VIEW REPORT' : '▶ NEXT QUESTION'}</button>
         ` : ''}
       `;
 
@@ -176,11 +132,7 @@ export function showQuiz(phase) {
         nextBtn.addEventListener('click', () => {
           if (isLast) {
             // Save score and close
-            if (phase === 'pre') {
-              gameState.preQuizScore = score;
-            } else {
-              gameState.postQuizScore = score;
-            }
+            gameState.postQuizScore = score;
             backdrop.remove();
             modal.remove();
             resolve(score);

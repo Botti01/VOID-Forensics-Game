@@ -43,8 +43,17 @@ const gameState = {
   hints: [],
 
   // --- Quiz Assessment ---
-  preQuizScore: 0,
   postQuizScore: 0,
+};
+
+export const ACTION_TYPES = {
+  SESSION_START: 'SESSION_START',
+  EVIDENCE_ACCESS: 'EVIDENCE_ACCESS',
+  DISCOVERY: 'DISCOVERY',
+  HINT_USED: 'HINT_USED',
+  PROCESS_KILLED: 'PROCESS_KILLED',
+  KEY_EXTRACTED: 'KEY_EXTRACTED',
+  GAME_OVER: 'GAME_OVER',
 };
 
 /**
@@ -77,21 +86,25 @@ export function initState(scenario) {
   gameState.killedMalicious = false;
   gameState.hints = scenario.hints ? [...scenario.hints] : [];
 
-  // Quiz scores are set by quiz.js via gameState.preQuizScore / postQuizScore
-  gameState.preQuizScore = 0;
+  // Quiz score is set by quiz.js via gameState.postQuizScore
   gameState.postQuizScore = 0;
 }
 
 /**
  * Log a player action for the final report.
  */
-export function logAction(action, details = '') {
-  const elapsed = gameState.totalTime - gameState.timeRemaining;
-  const mins = Math.floor(elapsed / 60);
+export function logAction(actionType, description, severity = 'info') {
+  const elapsed = Math.max(0, gameState.totalTime - gameState.timeRemaining);
+  const hours = Math.floor(elapsed / 3600);
+  const mins = Math.floor((elapsed % 3600) / 60);
   const secs = elapsed % 60;
-  const timestamp = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  gameState.actionsLog.push({ timestamp, action, details });
-  gameState.commandCount++;
+  const timestamp = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  gameState.actionsLog.push({
+    timestamp,
+    actionType,
+    description,
+    severity,
+  });
 }
 
 /**

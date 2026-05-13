@@ -154,18 +154,17 @@ export function buildReportData() {
     maxScore: 1000,
     scoreBreakdown: getScoreLog(),
 
-    // Commands
+    // Audit trail
     commandCount: gameState.commandCount,
     actionsLog: gameState.actionsLog.map(a => ({
       timestamp: a.timestamp,
-      action: a.action,
-      details: a.details || a.action,
+      actionType: a.actionType,
+      description: a.description,
+      severity: a.severity,
     })),
 
     // Quiz Assessment
-    preQuizScore: gameState.preQuizScore,
     postQuizScore: gameState.postQuizScore,
-    knowledgeDelta: gameState.postQuizScore - gameState.preQuizScore,
 
     // Learning
     lessonsUnlocked: lessons.map(l => ({
@@ -257,10 +256,7 @@ export function generateTxtReport(data) {
   lines.push(dash);
   lines.push('  KNOWLEDGE ASSESSMENT');
   lines.push(dash);
-  lines.push(`  Pre-Quiz Score:      ${data.preQuizScore} / 3`);
-  lines.push(`  Post-Quiz Score:     ${data.postQuizScore} / 3`);
-  const deltaSign = data.knowledgeDelta > 0 ? '+' : '';
-  lines.push(`  Knowledge Delta:     ${deltaSign}${data.knowledgeDelta}`);
+  lines.push(`  Post-Investigation Verification Score: ${data.postQuizScore} / 3`);
   lines.push('');
   lines.push(dash);
   lines.push('  PENALTIES');
@@ -279,13 +275,14 @@ export function generateTxtReport(data) {
   lines.push(`  TOTAL:  ${data.score} / ${data.maxScore}`);
   lines.push('');
   lines.push(dash);
-  lines.push(`  COMMANDS EXECUTED (${data.commandCount})`);
+  lines.push(`  CHAIN OF CUSTODY & AUDIT TRAIL (${data.actionsLog.length})`);
   lines.push(dash);
   if (data.actionsLog.length === 0) {
     lines.push('  (none)');
   } else {
     for (const a of data.actionsLog) {
-      lines.push(`  [${a.timestamp}]  ${a.details}`);
+      const sev = (a.severity || 'info').toUpperCase();
+      lines.push(`  [${a.timestamp}]  [${a.actionType}]  [${sev}]  ${a.description}`);
     }
   }
   lines.push('');
@@ -436,10 +433,11 @@ export function generateReport() {
   printBlank();
 
   printSeparator();
-  printHeader("  COMMANDS EXECUTED");
+  printHeader("  CHAIN OF CUSTODY & AUDIT TRAIL");
   printSeparator();
   for (const a of gameState.actionsLog) {
-    printLine(`  [${a.timestamp}]  ${a.details || a.action}`, 'dim');
+    const sev = (a.severity || 'info').toUpperCase();
+    printLine(`  [${a.timestamp}]  [${a.actionType}]  [${sev}]  ${a.description}`, 'dim');
   }
   printBlank();
 
