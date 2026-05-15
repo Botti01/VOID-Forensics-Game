@@ -1,6 +1,17 @@
 // js/gameState.js — Central Game State for V.O.I.D.
 // This module holds all mutable game state and provides methods to manipulate it.
 
+import BEGINNER_TIER     from './levels/beginner.js';
+import INTERMEDIATE_TIER from './levels/intermediate.js';
+import EXPERT_TIER       from './levels/expert.js';
+
+// Lookup table for the three modular tier configs.
+const TIER_MAP = {
+  beginner:     BEGINNER_TIER,
+  intermediate: INTERMEDIATE_TIER,
+  expert:       EXPERT_TIER,
+};
+
 const gameState = {
   // --- Meta ---
   gamePhase: 'loading', // 'loading' | 'intro' | 'playing' | 'won' | 'lost'
@@ -30,9 +41,17 @@ const gameState = {
   innocentKills: 0,
 
   // --- Difficulty ---
-  difficulty: 'intermediate',
+  difficulty: 'beginner',
   difficultyConfig: {},
   difficultyFlags: {},
+
+  // --- Hint Progress ---
+  lastHintStage: null,
+  lastHintText: '',
+  pslistExecuted: false,
+  pstreeExecuted: false,
+  netscanExecuted: false,
+  malfindExecuted: false,
 
   // --- Discovery Flags ---
   foundMaliciousProcess: false,
@@ -98,6 +117,106 @@ export function setDifficulty(level) {
   gameState.tickInterval = config.tickInterval;
 }
 
+export function applyDifficultyTuning() {
+  const osType = gameState.scenarioMeta?.osType || 'linux';
+  if (gameState.difficulty === 'beginner') {
+    const malProc = gameState.processes.find(p => p.pid === gameState.maliciousPID);
+    if (malProc) {
+      if (osType === 'linux') {
+        malProc.name = 'shadowcryptd';
+        malProc.path = '/usr/bin/shadowcryptd';
+        malProc.service = 'ransomware';
+      } else {
+        malProc.name = 'ransomvoid.exe';
+        malProc.path = 'C:\\Windows\\System32\\ransomvoid.exe';
+        malProc.service = 'ransomware';
+      }
+      malProc.isSuspicious = true;
+    }
+    gameState.suspiciousPIDs = [gameState.maliciousPID];
+  }
+}
+
+/**
+ * Apply a modular difficulty tier to the live game state.
+ *
+ * This is the preferred replacement for the setDifficulty + applyDifficultyTuning
+ * pair. Call it AFTER initState() so the scenario processes are already loaded.
+ *
+ * What it does:
+ *  1. Writes timing parameters (timer length, encryption speed) into state.
+ *  2. Writes feature flags (masquerade, memdumpDelay, enableUtilities).
+ *  3. Renames the malicious process according to the tier's masquerade config.
+ *  4. Injects decoy processes (expert tier) that the analyst must not kill.
+ *
+ * @param {string} tierString - One of 'beginner' | 'intermediate' | 'expert'
+ */
+export function applyDifficultyTier(tierString) {
+  const tier   = TIER_MAP[tierString] || TIER_MAP.intermediate;
+  const osType = gameState.scenarioMeta?.osType || 'linux';
+
+  // ── 1. Timing parameters ──────────────────────────────────────────────────
+  gameState.difficulty      = tier.tier;
+  gameState.totalTime       = tier.timerMinutes * 60;
+  gameState.timeRemaining   = gameState.totalTime;
+  gameState.encryptionRate  = tier.encryptionTickPercent;
+  gameState.tickInterval    = tier.encryptionTickSeconds;
+
+  // ── 2. Feature flags ──────────────────────────────────────────────────────
+  // Store the full tier config for reference by other modules (e.g. commands.js
+  // reads difficultyFlags.memdumpDelayMs to simulate extraction latency).
+  gameState.difficultyConfig = { ...tier };
+  gameState.difficultyFlags  = {
+    masqueradeMode:  tier.masquerade,
+    memdumpDelayMs:  tier.memdumpDelayMs,
+    enableUtilities: tier.enableUtilities,
+  };
+
+  // ── 3. Malicious process name override ────────────────────────────────────
+  const malProc = gameState.processes.find(p => p.pid === gameState.maliciousPID);
+  if (malProc) {
+    const override = tier.maliciousProcessOverride[osType];
+    if (override) {
+      malProc.name    = override.name;
+      malProc.path    = override.path;
+      malProc.service = override.service;
+    }
+    // At beginner the process name is obviously wrong, so flag it with [!]
+    // in pslist output. At higher tiers it looks legitimate — no flag.
+    malProc.isSuspicious = !tier.masquerade;
+  }
+
+  // ── 4. Decoy process injection ────────────────────────────────────────────
+  // Decoys are OS-specific. They are only present in expert tier but the
+  // shape is consistent across all tiers (empty arrays for beginner/intermediate).
+  const decoyList = tier.decoyProcesses
+    ? (tier.decoyProcesses[osType] || [])
+    : [];
+
+  if (decoyList.length > 0) {
+    const existingPids = new Set(gameState.processes.map(p => p.pid));
+    for (const decoy of decoyList) {
+      // Guard against double-injection when launchGame() is called repeatedly.
+      if (!existingPids.has(decoy.pid)) {
+        gameState.processes.push({ ...decoy });
+        existingPids.add(decoy.pid);
+      }
+    }
+  }
+
+  // ── 5. suspiciousPIDs housekeeping ────────────────────────────────────────
+  // Beginner marks only the single malicious PID as suspicious (drives the [!]
+  // indicator). Intermediate and expert remove the pre-set suspicious flag so
+  // the analyst cannot shortcut identification.
+  if (tier.tier === 'beginner') {
+    gameState.suspiciousPIDs = [gameState.maliciousPID];
+  } else {
+    // Clear the scenario's default suspicious list — masquerade means nothing
+    // should be pre-flagged for the player.
+    gameState.suspiciousPIDs = [];
+  }
+}
+
 /**
  * Initialize game state from scenario data.
  * @param {object} scenario - The scenario data object from scenario.js
@@ -121,6 +240,12 @@ export function initState(scenario) {
   gameState.actionsLog = [];
   gameState.commandCount = 0;
   gameState.innocentKills = 0;
+  gameState.lastHintStage = null;
+  gameState.lastHintText = '';
+  gameState.pslistExecuted = false;
+  gameState.pstreeExecuted = false;
+  gameState.netscanExecuted = false;
+  gameState.malfindExecuted = false;
   gameState.foundMaliciousProcess = false;
   gameState.foundC2Connection = false;
   gameState.foundInjectedCode = false;

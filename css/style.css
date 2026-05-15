@@ -396,6 +396,16 @@ body::after {
   box-shadow: var(--glow-red);
 }
 
+.hud-bar-fill.flash {
+  box-shadow: 0 0 18px rgba(255, 77, 109, 0.65), var(--glow-red);
+  filter: brightness(1.3);
+}
+
+.hud-value.flash {
+  color: var(--text-red-bright);
+  text-shadow: 0 0 10px rgba(255, 77, 109, 0.6);
+}
+
 .hud-bar-fill.danger { animation: pulse-bar 1s infinite; }
 .hud-bar-fill.critical { animation: pulse-bar 0.4s infinite; }
 
@@ -909,6 +919,91 @@ body::after {
   box-shadow: 0 12px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(0, 229, 255, 0.12);
 }
 
+/* Report tab system */
+.report-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-tabs-nav {
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  background: rgba(10, 18, 24, 0.4);
+  border-radius: 6px;
+  border: 1px solid #1a2a3a;
+  flex-shrink: 0;
+}
+
+.report-tab-btn {
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  border: 1px solid #2a3a4a;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+}
+
+.report-tab-btn:hover {
+  color: var(--text-primary);
+  border-color: #3a4a5a;
+}
+
+.report-tab-btn.active-tab {
+  color: var(--text-white);
+  background: linear-gradient(90deg, rgba(0, 229, 255, 0.08), rgba(0, 255, 136, 0.05));
+  border-color: var(--accent-cyan);
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+}
+
+.report-tab-contents {
+  /* No overflow:hidden here — let the modal handle scrolling */
+}
+
+.report-tab-content {
+  padding: 4px 0;
+}
+
+.scrollable {
+  max-height: 38vh;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px dashed rgba(42, 58, 74, 0.3);
+  border-radius: 4px;
+}
+
+.scrollable::-webkit-scrollbar { width: 5px; }
+.scrollable::-webkit-scrollbar-track { background: var(--bg-primary); }
+.scrollable::-webkit-scrollbar-thumb { background: #2a3a4a; border-radius: 3px; }
+
+.audit-log .audit-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px;
+  border-bottom: 1px solid rgba(42, 58, 74, 0.1);
+}
+
+.audit-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.sev-info    { background: rgba(0, 229, 255, 0.08); color: var(--text-cyan); border: 1px solid rgba(0,229,255,0.2); }
+.sev-success { background: rgba(0, 255, 136, 0.08); color: var(--accent-green); border: 1px solid rgba(0,255,136,0.2); }
+.sev-warning { background: rgba(255, 215, 64, 0.08); color: var(--text-yellow); border: 1px solid rgba(255,215,64,0.2); }
+.sev-critical{ background: rgba(255, 68, 68, 0.08); color: var(--text-red-bright); border: 1px solid rgba(255,68,68,0.2); }
+.audit-empty { color: var(--text-dim); padding: 12px; font-size: 13px; }
+
 .report-modal .report-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1013,6 +1108,74 @@ body::after {
   font-size: 14px;
   color: var(--text-yellow);
   padding: 3px 0;
+}
+
+/* ============================================================
+   ANALYST EVALUATION (report modal — grade-driven narrative)
+   ============================================================ */
+.report-evaluation {
+  background: rgba(0, 0, 0, 0.25);
+  border-left: 4px solid var(--text-muted);
+  border-radius: 4px;
+  padding: 14px 16px;
+  margin-top: 4px;
+}
+
+.report-evaluation .eval-verdict {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.report-evaluation .eval-detail {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.report-evaluation .eval-action {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Grade colour accents — left border + verdict colour */
+.report-evaluation.eval-s {
+  border-left-color: var(--accent-cyan);
+}
+.report-evaluation.eval-s .eval-verdict {
+  color: var(--accent-cyan);
+}
+
+.report-evaluation.eval-a {
+  border-left-color: var(--accent-green);
+}
+.report-evaluation.eval-a .eval-verdict {
+  color: var(--accent-green);
+}
+
+.report-evaluation.eval-b {
+  border-left-color: var(--text-yellow);
+}
+.report-evaluation.eval-b .eval-verdict {
+  color: var(--text-yellow);
+}
+
+.report-evaluation.eval-c {
+  border-left-color: #ff9800;
+}
+.report-evaluation.eval-c .eval-verdict {
+  color: #ff9800;
+}
+
+.report-evaluation.eval-d {
+  border-left-color: var(--text-red);
+}
+.report-evaluation.eval-d .eval-verdict {
+  color: var(--text-red);
 }
 
 .quiz-score-line {
@@ -1691,4 +1854,3 @@ body::after {
   .results-stats { grid-template-columns: 1fr; }
   .results-buttons { flex-direction: column; }
 }
-

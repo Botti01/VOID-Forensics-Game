@@ -1,7 +1,7 @@
 // js/gameLoop.js — Timer, Encryption Progression, and Alert System for V.O.I.D.
 
 import gameState, { advanceEncryption, logAction, ACTION_TYPES } from './gameState.js';
-import { printAlert, printBlank, printError, printHeader, printInfo, lockInput } from './terminal.js';
+import { printBlank, printError, printInfo, printOutput } from './terminal.js';
 import { playAlert } from './audio.js';
 // Note: generateReport() is kept in scoring.js but no longer called here.
 // The report is now displayed via modal popup in main.js.
@@ -45,7 +45,9 @@ export function startGameLoop(onHUDUpdate, onGameOver) {
     const file = advanceEncryption();
 
     if (file) {
-      printAlert(`[RANSOMWARE] ██ File encrypted: ${file} (${gameState.encryptionProgress}% complete)`);
+      // Print ransomware file encryption notice silently (do not auto-scroll)
+      printOutput(`[RANSOMWARE] ██ File encrypted: ${file} (${gameState.encryptionProgress}% complete)`, 'alert', true);
+      flashEncryptionHUD();
       playAlert();
     }
 
@@ -56,6 +58,19 @@ export function startGameLoop(onHUDUpdate, onGameOver) {
       triggerGameOver();
     }
   }, gameState.tickInterval * 1000);
+}
+
+function flashEncryptionHUD() {
+  const bar = document.getElementById('hud-encryption-bar');
+  const val = document.getElementById('hud-encryption');
+  if (bar) {
+    bar.classList.add('flash');
+    setTimeout(() => bar.classList.remove('flash'), 220);
+  }
+  if (val) {
+    val.classList.add('flash');
+    setTimeout(() => val.classList.remove('flash'), 220);
+  }
 }
 
 /**

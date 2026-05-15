@@ -40,16 +40,17 @@ export function getScoreLog() { return [...scoreLog]; }
 
 // ── Persistent Leaderboard (localStorage) ───────────────────────────────────
 
-const LEADERBOARD_KEY = 'void_leaderboard';
+const LEADERBOARD_KEY_PREFIX = 'void_lb_';
 const MAX_LEADERBOARD = 15;
 
 /**
  * Load leaderboard entries from localStorage.
  * Returns a sorted array (descending by score).
  */
-export function loadLeaderboard() {
+export function loadLeaderboard(difficulty = 'intermediate') {
   try {
-    const raw = localStorage.getItem(LEADERBOARD_KEY);
+    const key = LEADERBOARD_KEY_PREFIX + String(difficulty || 'intermediate');
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -59,9 +60,10 @@ export function loadLeaderboard() {
 /**
  * Save the full leaderboard array to localStorage.
  */
-function saveLeaderboard(entries) {
+function saveLeaderboard(entries, difficulty = 'intermediate') {
   try {
-    localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries));
+    const key = LEADERBOARD_KEY_PREFIX + String(difficulty || 'intermediate');
+    localStorage.setItem(key, JSON.stringify(entries));
   } catch {
     /* Storage full or unavailable — fail silently */
   }
@@ -72,12 +74,13 @@ function saveLeaderboard(entries) {
  * Sorts by score descending, trims to MAX_LEADERBOARD.
  * Returns the updated array.
  */
-export function addLeaderboardEntry(entry) {
-  const lb = loadLeaderboard();
+export function addLeaderboardEntry(entry, difficulty = 'intermediate') {
+  const key = difficulty || 'intermediate';
+  const lb = loadLeaderboard(key);
   lb.push(entry);
   lb.sort((a, b) => b.score - a.score);
   const trimmed = lb.slice(0, MAX_LEADERBOARD);
-  saveLeaderboard(trimmed);
+  saveLeaderboard(trimmed, key);
   return trimmed;
 }
 

@@ -1,6 +1,6 @@
 // js/main.js — Bootstrap and Game Initialization for V.O.I.D.
 
-import gameState, { initState, logAction, ACTION_TYPES, setDifficulty } from './gameState.js';
+import gameState, { initState, logAction, ACTION_TYPES, applyDifficultyTier } from './gameState.js';
 import { getScenario } from './scenario.js';
 import { initTerminal, printIntro, printBlank, clearTerminal } from './terminal.js';
 import { parseCommand } from './parser.js';
@@ -16,7 +16,7 @@ import {
 import { showQuiz } from './quiz.js';
 
 let selectedOS = 'linux';
-let selectedDifficulty = 'intermediate';
+let selectedDifficulty = 'beginner';
 let playerName = '';
 
 const TUTORIAL_SEEN_KEY = 'void_has_seen_tutorial';
@@ -101,7 +101,7 @@ async function launchGame() {
 
   const scenario = getScenario(selectedOS);
   initState(scenario);
-  setDifficulty(selectedDifficulty);
+  applyDifficultyTier(selectedDifficulty);
   gameState.playerName = playerName;
 
   logAction(
@@ -441,87 +441,121 @@ function showReportModal() {
 
   modal.innerHTML = `
     <h2>V.O.I.D. \u2014 FORENSIC INVESTIGATION REPORT</h2>
-    <div class="report-outcome ${isWin ? 'win' : 'loss'}">
-      ${isWin ? '\u2605 MISSION SUCCESSFUL \u2014 Ransomware Neutralized' : '\u2717 MISSION FAILED'}
-    </div>
+    <div class="report-outcome ${isWin ? 'win' : 'loss'}">${isWin ? '\u2605 MISSION SUCCESSFUL \u2014 Ransomware Neutralized' : '\u2717 MISSION FAILED'}</div>
     <div class="report-rank">${rank.title} ${rank.stars}</div>
 
-    <div class="report-grid">
-      <div class="report-col">
-        <div class="report-section">
-          <div class="report-section-title">Timeline</div>
-          ${row('Analyst', gameState.playerName)}
-          ${row('Target', gameState.scenarioMeta?.target || '\u2014')}
-          ${row('Target OS', gameState.scenarioMeta?.os || '\u2014')}
-          ${row('Time Elapsed', fmtTime(elapsed) + ' / ' + Math.floor(gameState.totalTime / 60) + ':00')}
-          ${row('Encryption at End', gameState.encryptionProgress + '%')}
-          ${row('Files Encrypted', gameState.encryptedFiles.length + ' / ' + gameState.fileTargets.length)}
+    <div class="report-tabs">
+      <nav class="report-tabs-nav">
+        <button class="report-tab-btn active-tab" data-tab="summary">Summary</button>
+        <button class="report-tab-btn" data-tab="audit">Audit Trail</button>
+        <button class="report-tab-btn" data-tab="intel">Intel Base</button>
+      </nav>
+
+      <div class="report-tab-contents">
+        <div class="report-tab-content" data-tab="summary">
+          <div class="report-grid">
+            <div class="report-col">
+              <div class="report-section">
+                <div class="report-section-title">Timeline</div>
+                ${row('Analyst', gameState.playerName)}
+                ${row('Target', gameState.scenarioMeta?.target || '\u2014')}
+                ${row('Target OS', gameState.scenarioMeta?.os || '\u2014')}
+                ${row('Time Elapsed', fmtTime(elapsed) + ' / ' + Math.floor(gameState.totalTime / 60) + ':00')}
+                ${row('Encryption at End', gameState.encryptionProgress + '%')}
+                ${row('Files Encrypted', gameState.encryptedFiles.length + ' / ' + gameState.fileTargets.length)}
+              </div>
+
+              <div class="report-section">
+                <div class="report-section-title">Penalties</div>
+                ${row('Innocent Kills', gameState.innocentKills + ' (\u2212' + (gameState.innocentKills * 50) + ' pts)', gameState.innocentKills > 0 ? 'fail' : '')}
+                ${row('Hints Used', String(gameState.hintsUsed))}
+              </div>
+            </div>
+
+            <div class="report-col">
+              <div class="report-section">
+                <div class="report-section-title">Score Breakdown</div>
+                ${scoreBreakdownHTML}
+                <div class="report-row" style="border-top:1px solid #2a3a4a;padding-top:6px;margin-top:6px">
+                  <span class="label" style="font-weight:700">TOTAL SCORE</span>
+                  <span class="value" style="font-weight:700;font-size:15px">${gameState.score} / 1000</span>
+                </div>
+              </div>
+
+              <div class="report-section">
+                <div class="report-section-title">Investigation Results</div>
+                ${chk(gameState.foundMaliciousProcess, 'Malware Identified', malName + ' (PID ' + malPID + ')', 'Not identified')}
+                ${chk(gameState.foundC2Connection, 'C2 Server Found', 'External C2 connections detected', 'Not found')}
+                ${chk(gameState.foundInjectedCode, 'Injected Code', 'RWX memory detected via malfind', 'Not detected')}
+                ${chk(gameState.extractedKey, 'AES Key Recovered', gameState.aesKey, 'Key lost \u2014 files unrecoverable')}
+                ${chk(gameState.killedMalicious, 'Ransomware Killed', 'Process terminated', 'Still running')}
+              </div>
+            </div>
+          </div>
+
+          <div class="report-section" style="margin-top:18px">
+            <div class="report-section-title">Knowledge Assessment</div>
+            <div class="quiz-score-line">
+              <span class="quiz-score-label">Post-Investigation Verification Score</span>
+              <span class="quiz-score-badge ${postScoreClass}">${postScore}/3 Correct</span>
+            </div>
+          </div>
+
+          <div class="report-export-bar">
+            <button class="report-export-btn" id="export-txt" title="Download plain-text forensic report">
+              <span class="export-icon">\u2913</span> Export Report (.txt)
+            </button>
+            <button class="report-export-btn" id="export-json" title="Download structured data for automated grading">
+              <span class="export-icon">{ }</span> Export Data (.json)
+            </button>
+          </div>
+
         </div>
 
-        <div class="report-section">
-          <div class="report-section-title">Investigation Results</div>
-          ${chk(gameState.foundMaliciousProcess, 'Malware Identified', malName + ' (PID ' + malPID + ')', 'Not identified')}
-          ${chk(gameState.foundC2Connection, 'C2 Server Found', 'External C2 connections detected', 'Not found')}
-          ${chk(gameState.foundInjectedCode, 'Injected Code', 'RWX memory detected via malfind', 'Not detected')}
-          ${chk(gameState.extractedKey, 'AES Key Recovered', gameState.aesKey, 'Key lost \u2014 files unrecoverable')}
-          ${chk(gameState.killedMalicious, 'Ransomware Killed', 'Process terminated', 'Still running')}
-        </div>
-
-        <div class="report-section">
-          <div class="report-section-title">Penalties</div>
-          ${row('Innocent Kills', gameState.innocentKills + ' (\u2212' + (gameState.innocentKills * 50) + ' pts)', gameState.innocentKills > 0 ? 'fail' : '')}
-          ${row('Hints Used', String(gameState.hintsUsed))}
-        </div>
-      </div>
-
-      <div class="report-col">
-        <div class="report-section">
-          <div class="report-section-title">Score Breakdown</div>
-          ${scoreBreakdownHTML}
-          <div class="report-row" style="border-top:1px solid #2a3a4a;padding-top:6px;margin-top:6px">
-            <span class="label" style="font-weight:700">TOTAL SCORE</span>
-            <span class="value" style="font-weight:700;font-size:15px">${gameState.score} / 1000</span>
+        <div class="report-tab-content" data-tab="audit" style="display:none">
+          <div class="report-section">
+            <div class="report-section-title">Chain of Custody & Audit Trail</div>
+            <div class="audit-legend">
+              <span class="audit-legend-item"><span class="audit-badge sev-info">INFO</span><span class="audit-legend-label">Evidence access</span></span>
+              <span class="audit-legend-item"><span class="audit-badge sev-success">SUCCESS</span><span class="audit-legend-label">Discovery</span></span>
+              <span class="audit-legend-item"><span class="audit-badge sev-warning">WARNING</span><span class="audit-legend-label">Risky action</span></span>
+              <span class="audit-legend-item"><span class="audit-badge sev-critical">CRITICAL</span><span class="audit-legend-label">Incident impact</span></span>
+            </div>
+            <div class="audit-log scrollable">${auditHTML || '<div class="audit-empty">No audit events recorded.</div>'}</div>
           </div>
         </div>
 
-        <div class="report-section">
-          <div class="report-section-title">Chain of Custody & Audit Trail</div>
-          <div class="audit-legend">
-            <span class="audit-legend-item"><span class="audit-badge sev-info">INFO</span><span class="audit-legend-label">Evidence access</span></span>
-            <span class="audit-legend-item"><span class="audit-badge sev-success">SUCCESS</span><span class="audit-legend-label">Discovery</span></span>
-            <span class="audit-legend-item"><span class="audit-badge sev-warning">WARNING</span><span class="audit-legend-label">Risky action</span></span>
-            <span class="audit-legend-item"><span class="audit-badge sev-critical">CRITICAL</span><span class="audit-legend-label">Incident impact</span></span>
+        <div class="report-tab-content" data-tab="intel" style="display:none">
+          <div class="report-section">
+            <div class="report-section-title">Learning Notes</div>
+            ${learningHTML}
           </div>
-          <div class="audit-log">${auditHTML || '<div class="audit-empty">No audit events recorded.</div>'}</div>
-        </div>
-
-        <div class="report-section">
-          <div class="report-section-title">Learning Notes</div>
-          ${learningHTML}
+          <div class="report-section">
+            <div class="report-section-title">Unlocked Lessons</div>
+            <div class="learning-list scrollable">${lessons.map(l => `<div class="lesson-item"><div class="lesson-title">${l.title}</div><div class="lesson-text">${l.text}</div></div>`).join('') || '<div class="audit-empty">No lessons unlocked.</div>'}</div>
+          </div>
         </div>
       </div>
-    </div>
-
-    <div class="report-section" style="margin-top:18px">
-      <div class="report-section-title">Knowledge Assessment</div>
-      <div class="quiz-score-line">
-        <span class="quiz-score-label">Post-Investigation Verification Score</span>
-        <span class="quiz-score-badge ${postScoreClass}">${postScore}/3 Correct</span>
-      </div>
-    </div>
-
-    <div class="report-export-bar">
-      <button class="report-export-btn" id="export-txt" title="Download plain-text forensic report">
-        <span class="export-icon">\u2913</span> Export Report (.txt)
-      </button>
-      <button class="report-export-btn" id="export-json" title="Download structured data for automated grading">
-        <span class="export-icon">{ }</span> Export Data (.json)
-      </button>
     </div>
 
     <button class="report-continue">\u25b6 CONTINUE TO RESULTS</button>
   `;
   document.body.appendChild(modal);
+
+  // Tab switching logic — enforce initial display states, then wire click handlers
+  const tabButtons = modal.querySelectorAll('.report-tab-btn');
+  const tabContents = modal.querySelectorAll('.report-tab-content');
+
+  // Guarantee initial state: only the first (summary) panel is visible
+  tabContents.forEach((c, i) => { c.style.display = i === 0 ? 'block' : 'none'; });
+
+  tabButtons.forEach(btn => btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    tabButtons.forEach(b => b.classList.toggle('active-tab', b === btn));
+    tabContents.forEach(c => {
+      c.style.display = c.dataset.tab === tab ? 'block' : 'none';
+    });
+  }));
 
   // Build report data once, reuse for exports
   const reportData = buildReportData();
@@ -562,7 +596,7 @@ function showResultsPage() {
     date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     ts: Date.now(),
   };
-  const leaderboard = addLeaderboardEntry(entry);
+  const leaderboard = addLeaderboardEntry(entry, gameState.difficulty);
 
   // Switch views
   document.getElementById('game-view').classList.add('hidden');
@@ -590,7 +624,8 @@ function showResultsPage() {
   // Leaderboard (from persistent storage)
   const tbody = document.getElementById('leaderboard-body');
   tbody.innerHTML = '';
-  leaderboard.forEach((e, i) => {
+  const board = loadLeaderboard(gameState.difficulty);
+  board.forEach((e, i) => {
     const tr = document.createElement('tr');
     if (e.ts === entry.ts) tr.className = 'current';
     tr.innerHTML = `<td class="rank-col">${i + 1}</td><td>${e.name}</td><td>${e.os}</td><td>${e.rank || '—'}</td><td>${e.outcome}</td><td>${e.date || '—'}</td><td class="score-col">${e.score}</td>`;

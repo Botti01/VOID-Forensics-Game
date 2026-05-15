@@ -70,17 +70,28 @@ function handleKeyDown(e) {
   }
 }
 
+
+/**
+ * Low-level printer that optionally prevents auto-scrolling.
+ * @param {string} text
+ * @param {string} cssClass
+ * @param {boolean} preventScroll
+ */
+export function printOutput(text, cssClass = '', preventScroll = false) {
+  const line = document.createElement('div');
+  line.className = `terminal-line ${cssClass}`;
+  line.textContent = text;
+  terminal.outputEl.appendChild(line);
+  if (!preventScroll) scrollToBottom();
+}
+
 /**
  * Print a line to the terminal output.
  * @param {string} text - The text to print
  * @param {string} cssClass - Optional CSS class for coloring
  */
 export function printLine(text, cssClass = '') {
-  const line = document.createElement('div');
-  line.className = `terminal-line ${cssClass}`;
-  line.textContent = text;
-  terminal.outputEl.appendChild(line);
-  scrollToBottom();
+  printOutput(text, cssClass, false);
 }
 
 /**

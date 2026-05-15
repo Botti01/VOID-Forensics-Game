@@ -1,7 +1,7 @@
 // js/commands.js — All forensic command implementations for V.O.I.D.
 
 import gameState, { getProcess, getChildren, killProcess, logAction, ACTION_TYPES } from './gameState.js';
-import { printLine, printError, printSuccess, printWarning, printHeader, printInfo, printBlank, printSeparator } from './terminal.js';
+import { printLine, printError, printSuccess, printWarning, printHeader, printInfo, printBlank, printSeparator, lockInput, unlockInput } from './terminal.js';
 import { addScore, removeScore } from './scoring.js';
 import { triggerLesson } from './learning.js';
 
@@ -23,8 +23,6 @@ const COMMANDS = {
   envars:   { handler: cmdEnvars,   desc: "Show environment variables for a process (--pid <PID>)" },
   kill:     { handler: cmdKill,     desc: "Terminate a process and its children (--pid <PID>)" },
   status:   { handler: cmdStatus,   desc: "Show current encryption %, time remaining, score" },
-  ls:       { handler: cmdLs,       desc: "List triage directory contents" },
-  cat:      { handler: cmdCat,      desc: "Read a triage text file" },
   clear:    { handler: cmdClear,    desc: "Clear the terminal screen" },
   mute:     { handler: cmdMute,     desc: "Toggle sound effects on/off" },
   tutorial: { handler: cmdTutorial, desc: "Open the interactive tutorial overlay" },
@@ -124,7 +122,9 @@ function cmdHelp() {
   printBlank();
   printHeader("Available Forensic Commands:");
   printSeparator();
+  const hideUtilities = gameState.difficulty === 'beginner';
   for (const [name, cmd] of Object.entries(COMMANDS)) {
+    if (hideUtilities && (name === 'ls' || name === 'cat')) continue;
     printLine(`  ${name.padEnd(12)} ${cmd.desc}`);
   }
   printBlank();
@@ -144,12 +144,23 @@ function cmdHint() {
     return;
   }
 
-  const penalty = getHintPenalty();
-  const hintText = getSmartHint();
+  const hintData = getSmartHint();
 
+  if (gameState.lastHintStage === hintData.stage && gameState.lastHintText) {
+    // Reminder: do not apply any penalties or log actions when re-requesting
+    // the same hint stage without progressing (anti-exploit safeguard).
+    printBlank();
+    printWarning(`[REMINDER] ${gameState.lastHintText}`);
+    printBlank();
+    return;
+  }
+
+  const penalty = getHintPenalty();
   gameState.hintsUsed++;
   gameState.timeRemaining = Math.max(0, gameState.timeRemaining - penalty.time);
   gameState.encryptionProgress = Math.min(100, gameState.encryptionProgress + penalty.encryption);
+  gameState.lastHintStage = hintData.stage;
+  gameState.lastHintText = hintData.text;
 
   logAction(
     ACTION_TYPES.HINT_USED,
@@ -159,7 +170,7 @@ function cmdHint() {
 
   printBlank();
   printError(`[HINT PENALTY] -${penalty.time}s time, +${penalty.encryption}% encryption`);
-  printWarning(`[HINT ${gameState.hintsUsed}/${maxHints}] ${hintText}`);
+  printWarning(`HINT: ${hintData.text}`);
   printBlank();
 }
 
@@ -169,33 +180,49 @@ function getHintPenalty() {
 }
 
 function getSmartHint() {
-  const suspectPid = gameState.maliciousPID || gameState.suspiciousPIDs[0] || '<PID>';
+  if (!gameState.pslistExecuted && !gameState.pstreeExecuted) {
+    return {
+      stage: 'recon',
+      text: "Survey running processes and identify services that started far later than boot.",
+    };
+  }
+
+  if (!gameState.foundC2Connection && !gameState.foundInjectedCode) {
+    return {
+      stage: 'triage',
+      text: "Correlate suspicious processes with external connections or injected memory regions.",
+    };
+  }
 
   if (!gameState.foundMaliciousProcess) {
-    if (!gameState.foundC2Connection && !gameState.foundInjectedCode) {
-      return "Start with 'pslist' or 'pstree' to spot late-starting processes.";
-    }
-    if (!gameState.foundC2Connection) {
-      return "Run 'netscan' to identify external C2 connections and suspicious PIDs.";
-    }
-    if (!gameState.foundInjectedCode) {
-      return "Run 'malfind' to detect RWX memory regions that indicate injection.";
-    }
-    return `Use 'yarascan --pid ${suspectPid}' to confirm the malicious process.`;
+    return {
+      stage: 'confirmation',
+      text: "Confirm the compromised service by inspecting memory signatures and anomalies.",
+    };
   }
 
   if (!gameState.extractedKey) {
-    return `Use 'memdump --pid ${gameState.maliciousPID}' to extract the AES key.`;
+    return {
+      stage: 'extraction',
+      text: "Dump volatile memory from the malicious process before remediation.",
+    };
   }
 
   if (!gameState.killedMalicious) {
-    return `Terminate the ransomware with 'kill --pid ${gameState.maliciousPID}'.`;
+    return {
+      stage: 'remediation',
+      text: "Terminate the ransomware only after the key is secured.",
+    };
   }
 
-  return "Core objectives are complete. Use 'status' to review or wait for the report.";
+  return {
+    stage: 'complete',
+    text: "Core objectives are complete. Use 'status' to review or wait for the report.",
+  };
 }
 
 function cmdPslist() {
+  gameState.pslistExecuted = true;
   logAction(ACTION_TYPES.EVIDENCE_ACCESS, 'Executed pslist (process snapshot)', 'info');
   printBlank();
   printHeader("Volatility 2.6.1 — pslist");
@@ -213,16 +240,13 @@ function cmdPslist() {
     const threads = String(p.threads).padStart(6);
     const time = `2024-11-22 ${p.startTime}`;
 
-    let flag = '';
-    if ((p.isMalicious || p.isSuspicious) && p.startTime > '13:00') flag = '  [!]';
-
-    const cssClass = (p.isMalicious || p.isSuspicious) ? 'suspicious' : '';
-    printLine(`${offset} ${name} ${pid} ${ppid} ${threads}   ${time}${flag}`, cssClass);
+    printLine(`${offset} ${name} ${pid} ${ppid} ${threads}   ${time}`);
   }
   printBlank();
 }
 
 function cmdPstree() {
+  gameState.pstreeExecuted = true;
   logAction(ACTION_TYPES.EVIDENCE_ACCESS, 'Executed pstree (process hierarchy)', 'info');
   printBlank();
   printHeader("Volatility 2.6.1 — pstree");
@@ -230,21 +254,13 @@ function cmdPstree() {
 
   const pids = new Set(gameState.processes.map(p => p.pid));
   const roots = gameState.processes.filter(p => !pids.has(p.ppid));
-  let hasSuspicious = false;
 
   function renderTree(proc, prefix, isLast) {
     const connector = prefix === '' ? '' : (isLast ? '└── ' : '├── ');
     let label = `${proc.name} (PID: ${proc.pid})`;
     if (proc.service) label += ` [${proc.service}]`;
 
-    let flag = '';
-    if (proc.isSuspicious && proc.startTime > '13:00') {
-      flag = `  ← [!] Started ${proc.startTime} (late)`;
-      hasSuspicious = true;
-    }
-
-    const cssClass = (proc.isMalicious || proc.isSuspicious) ? 'suspicious' : '';
-    printLine(`${prefix}${connector}${label}${flag}`, cssClass);
+    printLine(`${prefix}${connector}${label}`);
 
     const children = gameState.processes.filter(p => p.ppid === proc.pid);
     children.forEach((child, i) => {
@@ -256,14 +272,11 @@ function cmdPstree() {
   for (const root of roots) {
     renderTree(root, '', true);
   }
-
-  if (hasSuspicious) {
-    triggerLesson('pstree_anomaly');
-  }
   printBlank();
 }
 
 function cmdNetscan() {
+  gameState.netscanExecuted = true;
   logAction(ACTION_TYPES.EVIDENCE_ACCESS, 'Executed netscan (network connections)', 'info');
   printBlank();
   printHeader("Volatility 2.6.1 — netscan");
@@ -301,6 +314,7 @@ function cmdNetscan() {
 }
 
 function cmdMalfind() {
+  gameState.malfindExecuted = true;
   logAction(ACTION_TYPES.EVIDENCE_ACCESS, 'Executed malfind (memory injection scan)', 'info');
   printBlank();
   printHeader("Volatility 2.6.1 — malfind");
@@ -384,16 +398,88 @@ function cmdMemdump(args, flags) {
   printHeader(`Memory Dump — ${proc.name} (PID: ${pid})`);
   printBlank();
 
-  if (proc.hexDump && proc.hexDump.length > 0) {
-    for (const line of proc.hexDump) {
-      let cssClass = '';
-      if (line.startsWith('[!]')) cssClass = 'warning';
-      else if (line.startsWith('0x')) cssClass = 'hex';
-      else if (line.startsWith('Region:') || line.startsWith('Memory dump')) cssClass = 'header';
-      printLine(line, cssClass);
+  // Non-malicious processes always dump instantly (nothing special to extract)
+  if (!proc.isMalicious) {
+    if (proc.hexDump && proc.hexDump.length > 0) {
+      for (const line of proc.hexDump) {
+        let cssClass = '';
+        if (line.startsWith('[!]')) cssClass = 'warning';
+        else if (line.startsWith('0x')) cssClass = 'hex';
+        else if (line.startsWith('Region:') || line.startsWith('Memory dump')) cssClass = 'header';
+        printLine(line, cssClass);
+      }
+    } else {
+      printInfo(`Standard memory layout for ${proc.name}. No notable artifacts.`);
+    }
+    printBlank();
+    return;
+  }
+
+  // ── Malicious process: check for extraction delay ─────────────────────────
+  const delayMs = gameState.difficultyFlags?.memdumpDelayMs || 0;
+
+  if (delayMs > 0) {
+    // Expert tier: simulate realistic extraction latency.
+    // The game loop keeps running — encryption ticks while the analyst waits.
+    const delaySec = Math.round(delayMs / 1000);
+    printWarning(`[!] Initiating volatile memory dump. This operation will take ~${delaySec} seconds...`);
+    printInfo('    Encryption continues while the dump is running. Do NOT close the terminal.');
+    printBlank();
+
+    // Disable input during extraction to prevent conflicting commands
+    const termInput = document.getElementById('terminal-input');
+    if (termInput) {
+      termInput.disabled = true;
+      termInput.placeholder = 'Memory extraction in progress...';
     }
 
-    if (proc.isMalicious) {
+    setTimeout(() => {
+      // Re-check that the process still exists (could have been killed mid-dump)
+      const stillExists = gameState.processes.find(p => p.pid === pid);
+      if (!stillExists) {
+        printError('[✗] Process terminated during memory dump — extraction failed.');
+        printBlank();
+      } else {
+        // Print hex dump output
+        if (proc.hexDump && proc.hexDump.length > 0) {
+          for (const line of proc.hexDump) {
+            let cssClass = '';
+            if (line.startsWith('[!]')) cssClass = 'warning';
+            else if (line.startsWith('0x')) cssClass = 'hex';
+            else if (line.startsWith('Region:') || line.startsWith('Memory dump')) cssClass = 'header';
+            printLine(line, cssClass);
+          }
+        }
+
+        if (!gameState.extractedKey) {
+          logAction(ACTION_TYPES.KEY_EXTRACTED, `Extracted AES key from ${proc.name} (PID: ${pid})`, 'success');
+        }
+        gameState.extractedKey = true;
+        addScore(200, 'Extracted AES encryption key from memory');
+        printBlank();
+        printSuccess("★ AES key has been captured and logged as evidence.");
+        triggerLesson('aes_key_extracted');
+        printBlank();
+      }
+
+      // Re-enable input
+      if (termInput) {
+        termInput.disabled = false;
+        termInput.placeholder = 'Type a command...';
+        termInput.focus();
+      }
+    }, delayMs);
+  } else {
+    // Beginner / Intermediate: instant extraction
+    if (proc.hexDump && proc.hexDump.length > 0) {
+      for (const line of proc.hexDump) {
+        let cssClass = '';
+        if (line.startsWith('[!]')) cssClass = 'warning';
+        else if (line.startsWith('0x')) cssClass = 'hex';
+        else if (line.startsWith('Region:') || line.startsWith('Memory dump')) cssClass = 'header';
+        printLine(line, cssClass);
+      }
+
       if (!gameState.extractedKey) {
         logAction(ACTION_TYPES.KEY_EXTRACTED, `Extracted AES key from ${proc.name} (PID: ${pid})`, 'success');
       }
@@ -402,11 +488,11 @@ function cmdMemdump(args, flags) {
       printBlank();
       printSuccess("★ AES key has been captured and logged as evidence.");
       triggerLesson('aes_key_extracted');
+    } else {
+      printInfo(`Standard memory layout for ${proc.name}. No notable artifacts.`);
     }
-  } else {
-    printInfo(`Standard memory layout for ${proc.name}. No notable artifacts.`);
+    printBlank();
   }
-  printBlank();
 }
 
 function cmdHandles(args, flags) {
@@ -483,13 +569,27 @@ function cmdEnvars(args, flags) {
     printInfo("Standard environment. No anomalies.");
   } else {
     let hasLdPreload = false;
+    let hasC2Endpoint = false;
     for (const e of proc.envars) {
-      const isSusp = (e.name === 'PSExecutionPolicyPreference' || e.name === 'LD_PRELOAD' || e.name === 'SHADOW_C2');
+      const isSusp = (e.name === 'PSExecutionPolicyPreference' || e.name === 'LD_PRELOAD' || e.name === 'SHADOW_C2' || e.name === 'C2_ENDPOINT');
       const cssClass = isSusp ? 'suspicious' : '';
       if (e.name === 'LD_PRELOAD') hasLdPreload = true;
+      if (e.name === 'C2_ENDPOINT') hasC2Endpoint = true;
       printLine(`  ${e.name} = ${e.value}`, cssClass);
     }
     if (hasLdPreload) triggerLesson('ld_preload_detected');
+
+    // C2 discovery via environment variable (expert tier)
+    if (hasC2Endpoint && proc.isMalicious) {
+      printBlank();
+      printWarning('[!] C2 endpoint configuration found in process environment.');
+      if (!gameState.foundC2Connection) {
+        logAction(ACTION_TYPES.DISCOVERY, 'Identified C2 endpoint via environment variables', 'success');
+        addScore(100, 'Identified C2 connections');
+      }
+      gameState.foundC2Connection = true;
+      triggerLesson('c2_connection');
+    }
   }
   printBlank();
 }
