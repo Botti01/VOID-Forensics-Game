@@ -1,4 +1,4 @@
-// js/quiz.js — Post-Investigation Quiz System for V.O.I.D.
+// js/quiz.js - Post-Investigation Quiz System for V.O.I.D.
 // Measures learning outcome after the investigation.
 // Questions are drawn randomly from a pool to prevent metagaming.
 
@@ -14,10 +14,10 @@ export const BEGINNER_QUIZ_POOL = [
     tier: 'beginner',
     question: 'Why is it critical to extract the AES key BEFORE killing the ransomware process?',
     options: [
-      'Killing the process would crash the entire server.',
-      'The key exists only in volatile memory — it is lost forever once the process is killed.',
-      'The process needs to be running for antivirus to detect it.',
-      'The key is stored in a file that is deleted on process termination.',
+      'Stopping the process can trigger a crash loop that wipes the file cache.',
+      'The key only lives in volatile memory and disappears when the process stops.',
+      'The process must keep running so endpoint tools can quarantine the sample.',
+      'The key is stored in a temp file that is deleted only after reboot.',
     ],
     correctIndex: 1,
     explanation: 'The AES key is held exclusively in the ransomware\'s RAM. This is a textbook application of the Order of Volatility: volatile evidence must be captured before any remediation action that would destroy it.',
@@ -27,10 +27,10 @@ export const BEGINNER_QUIZ_POOL = [
     tier: 'beginner',
     question: 'Which Volatility plugin reveals injected code hiding inside a legitimate process?',
     options: [
-      'netscan — scans for active network connections.',
-      'pstree — displays the parent-child process hierarchy.',
-      'malfind — detects anomalous RWX memory regions indicating code injection.',
-      'handles — lists open file and object handles.',
+      'netscan, enumerates active sockets and TCP endpoints for network triage.',
+      'pstree, shows the parent to child process tree and launch lineage.',
+      'malfind, flags private RWX regions that suggest injected code.',
+      'handles, lists open file, registry, and mutex handles per process.',
     ],
     correctIndex: 2,
     explanation: 'malfind scans process memory for regions with suspicious permissions (rwxp). These Read-Write-Execute anonymous mappings are a strong indicator of injected shellcode, DLL injection, or process hollowing.',
@@ -40,23 +40,23 @@ export const BEGINNER_QUIZ_POOL = [
     tier: 'beginner',
     question: 'What does a suspicious "PPID" (Parent PID) reveal in a forensic investigation?',
     options: [
-      'It tells you how much CPU the process is using.',
-      'It reveals which process spawned the suspect — an unusual parent can expose the attack chain.',
-      'It indicates how many threads the process has created.',
-      'It shows which user account owns the process.',
+      'It reports CPU usage spikes that hint at crypto mining activity.',
+      'It identifies which process spawned the suspect and maps the chain.',
+      'It counts the number of threads the process has created.',
+      'It shows the effective user account and privilege level.',
     ],
     correctIndex: 1,
-    explanation: 'System daemons (e.g., rsyslogd, svchost.exe) should always be children of a known init process (systemd or services.exe). A daemon with an unexpected parent — such as a web server worker — is a critical anomaly.',
+    explanation: 'System daemons (e.g., rsyslogd, svchost.exe) should always be children of a known init process (systemd or services.exe). A daemon with an unexpected parent, such as a web server worker, is a critical anomaly.',
   },
   {
     id: 'b_4',
     tier: 'beginner',
     question: 'What is "Order of Volatility" in digital forensics?',
     options: [
-      'A ranking of how dangerous different types of malware are.',
-      'A method for sorting network packets by priority.',
-      'A principle stating that the most transient evidence (RAM) must be collected first before less volatile sources.',
-      'A rule requiring investigators to shut down a system immediately upon discovery.',
+      'A severity ranking that scores malware families by damage potential.',
+      'A packet ordering scheme used by routers to prioritize traffic.',
+      'A principle that volatile evidence like RAM must be captured first.',
+      'A rule that mandates immediate shutdown to preserve disk integrity.',
     ],
     correctIndex: 2,
     explanation: 'Order of Volatility (RFC 3227) dictates collection order: RAM → swap → running processes → network state → disk. Evidence in RAM is destroyed on power-off, making it the top priority in live forensics.',
@@ -66,49 +66,49 @@ export const BEGINNER_QUIZ_POOL = [
     tier: 'beginner',
     question: 'What does the memory protection flag "rwxp" indicate about a memory region?',
     options: [
-      'The memory is Read-Only and cannot be modified.',
-      'The memory is Read-Write-Execute and Private — common for injected shellcode.',
-      'The memory is shared between multiple processes.',
-      'The memory belongs to a kernel module.',
+      'Readable and executable only, typically a signed code segment.',
+      'Readable, writable, executable, and private, common in injection.',
+      'Shared memory mapped from a file and locked by the kernel.',
+      'Kernel space memory allocated for a device driver.',
     ],
     correctIndex: 1,
-    explanation: '"rwxp" means the memory region is Readable, Writable, and Executable — and Private (not shared). Legitimate code segments are typically only readable and executable (r-xp). An anonymous rwxp mapping is a textbook sign of dynamically injected code.',
+    explanation: '"rwxp" means the memory region is Readable, Writable, and Executable, and Private (not shared). Legitimate code segments are typically only readable and executable (r-xp). An anonymous rwxp mapping is a textbook sign of dynamically injected code.',
   },
   {
     id: 'b_6',
     tier: 'beginner',
     question: 'Which technique does LD_PRELOAD injection use to compromise a process?',
     options: [
-      'It replaces the kernel scheduler with a malicious version.',
-      'It injects a malicious shared library that is loaded before all others, hijacking function calls.',
-      'It overwrites the process\'s executable on disk with malicious code.',
-      'It sends a signal to the target process to load a remote library over the network.',
+      'It replaces the kernel scheduler to hijack CPU time slices.',
+      'It loads a malicious shared library first to hook functions.',
+      'It overwrites the on disk executable with a trojaned copy.',
+      'It forces the process to download a library over the network.',
     ],
     correctIndex: 1,
-    explanation: 'LD_PRELOAD is a Linux environment variable that forces shared libraries to be loaded before all others. Attackers abuse it to hook system calls — for example, intercepting read/write operations to encrypt files transparently.',
+    explanation: 'LD_PRELOAD is a Linux environment variable that forces shared libraries to be loaded before all others. Attackers abuse it to hook system calls, for example, intercepting read/write operations to encrypt files transparently.',
   },
   {
     id: 'b_7',
     tier: 'beginner',
     question: 'In a live forensics investigation, why should you NOT shut down the compromised server immediately?',
     options: [
-      'Shutdown would alert the attacker and give them time to escape.',
-      'The malware has a watchdog that reinstalls itself on reboot.',
-      'Critical evidence such as encryption keys and running process state exists only in RAM and would be irretrievably lost.',
-      'The server logs are stored in memory and would be deleted.',
+      'A shutdown alerts the attacker who may erase logs remotely.',
+      'The malware always reinstalls from a hidden partition on reboot.',
+      'Volatile evidence like keys and process state in RAM would vanish.',
+      'System logs exist only in memory and are deleted by power loss.',
     ],
     correctIndex: 2,
-    explanation: 'RAM is volatile: any data held there — encryption keys, decrypted payloads, active network state — is permanently destroyed on shutdown. Live forensics preserves this evidence before any remediation.',
+    explanation: 'RAM is volatile: any data held there, such as encryption keys, decrypted payloads, and active network state, is permanently destroyed on shutdown. Live forensics preserves this evidence before any remediation.',
   },
   {
     id: 'b_8',
     tier: 'beginner',
     question: 'What is the primary goal of the "memdump" command in a ransomware investigation?',
     options: [
-      'To forcibly terminate the ransomware process.',
-      'To capture a binary snapshot of a process\'s memory space, preserving volatile evidence like encryption keys.',
-      'To list all files that have been encrypted by the ransomware.',
-      'To scan the process memory for known malware signatures.',
+      'To terminate the ransomware and stop encryption immediately.',
+      'To capture a full snapshot of a process memory space for analysis.',
+      'To list every file that has been encrypted on the disk.',
+      'To scan memory for known malware signatures in real time.',
     ],
     correctIndex: 1,
     explanation: 'memdump creates a binary image of a process\'s entire virtual address space. In a ransomware scenario, the AES key used for encryption is held in memory and must be extracted this way before the process is terminated.',
@@ -118,10 +118,10 @@ export const BEGINNER_QUIZ_POOL = [
     tier: 'beginner',
     question: 'A web server process (apache2) has spawned a bash shell at 13:45, hours after boot. What does this most likely indicate?',
     options: [
-      'A routine scheduled maintenance task run by the system administrator.',
-      'A normal behaviour for Apache during high traffic periods.',
-      'A webshell exploit — an attacker uploaded a malicious script that spawned a reverse shell.',
-      'A crash handler launched by the kernel to recover from a fault.',
+      'A scheduled maintenance job run by the administrator.',
+      'A normal Apache behavior during high traffic spikes.',
+      'A webshell exploit that spawned a reverse shell from the server.',
+      'A kernel crash handler launched after a fault recovery.',
     ],
     correctIndex: 2,
     explanation: 'Web servers should never spawn interactive shells. A bash child of apache2 hours after boot strongly suggests a webshell was uploaded and executed by an attacker, providing them with remote command execution.',
@@ -131,13 +131,13 @@ export const BEGINNER_QUIZ_POOL = [
     tier: 'beginner',
     question: 'What is "process masquerading" in the context of malware evasion?',
     options: [
-      'A technique where the malware encrypts its own process memory to avoid scanning.',
-      'When malware adopts the name and path of a legitimate system process to blend in with normal activity.',
-      'A method of migrating a process to a different CPU core to avoid detection.',
-      'When malware registers itself as a kernel driver to gain elevated privileges.',
+      'Malware encrypts its own memory to evade scanners.',
+      'Malware adopts the name and path of a legitimate process.',
+      'Malware migrates to another CPU core to avoid profiling.',
+      'Malware registers as a kernel driver to gain privileges.',
     ],
     correctIndex: 1,
-    explanation: 'Process masquerading (also called process impersonation) involves naming a malicious process identically to a legitimate system daemon (e.g., svchost.exe or rsyslogd). The analyst must rely on start time, PPID, and memory analysis — not the name alone — to identify it.',
+    explanation: 'Process masquerading (also called process impersonation) involves naming a malicious process identically to a legitimate system daemon (e.g., svchost.exe or rsyslogd). The analyst must rely on start time, PPID, and memory analysis, not the name alone, to identify it.',
   },
 ];
 
@@ -172,7 +172,7 @@ export function getRandomQuestions(tier = 'beginner', count = 3) {
  * Show a quiz modal and return a Promise that resolves with the score (0-3).
  * Questions are sampled dynamically from the pool via getRandomQuestions().
  *
- * @returns {Promise<number>} — number of correct answers (0–3)
+ * @returns {Promise<number>} - number of correct answers (0-3)
  */
 export function showQuiz() {
   // Draw 3 random questions for the active difficulty tier.

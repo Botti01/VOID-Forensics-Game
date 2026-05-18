@@ -1,4 +1,4 @@
-/* css/style.css — V.O.I.D. Cyberpunk Terminal Theme */
+/* css/style.css - V.O.I.D. Cyberpunk Terminal Theme */
 
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
 
@@ -92,6 +92,9 @@ body::after {
   height: 100vh;
   width: 100vw;
   background: var(--bg-primary);
+  position: relative;
+  padding-bottom: 90px;
+  box-sizing: border-box;
 }
 
 .menu-container {
@@ -99,6 +102,8 @@ body::after {
   max-width: 650px;
   width: 90%;
   animation: fadeIn 0.8s ease;
+  padding-bottom: 0;
+  margin-bottom: 0;
 }
 
 .ascii-art {
@@ -121,7 +126,7 @@ body::after {
 .menu-tagline {
   color: var(--text-muted);
   font-size: 13px;
-  margin-bottom: 44px;
+  margin-bottom: 12px;
 }
 
 .menu-form {
@@ -147,13 +152,13 @@ body::after {
 
 .menu-input {
   width: 100%;
-  padding: 14px 18px;
+  padding: 16px 20px;
   background: var(--bg-secondary);
   border: 1px solid #2a3a4a;
   border-radius: 4px;
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 17px;
+  font-size: 18px;
   outline: none;
   transition: border-color 0.3s, box-shadow 0.3s;
 }
@@ -215,7 +220,7 @@ body::after {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 14px 12px;
+  padding: 16px 14px;
   background: var(--bg-secondary);
   border: 2px solid #2a3a4a;
   border-radius: 6px;
@@ -235,13 +240,13 @@ body::after {
   box-shadow: 0 0 15px rgba(0, 229, 255, 0.12);
 }
 
-.difficulty-name { color: var(--text-white); font-size: 14px; font-weight: 700; }
-.difficulty-detail { color: var(--text-muted); font-size: 10px; text-align: center; }
+.difficulty-name { color: var(--text-white); font-size: 15px; font-weight: 700; }
+.difficulty-detail { color: var(--text-muted); font-size: 12px; text-align: center; }
 
 /* Start Button */
 .start-btn {
   width: 100%;
-  padding: 16px;
+  padding: 18px;
   margin-top: 8px;
   background: linear-gradient(135deg, rgba(0, 255, 136, 0.15), rgba(0, 229, 255, 0.1));
   border: 2px solid var(--accent-green);
@@ -265,7 +270,7 @@ body::after {
 
 .start-btn-text {
   color: var(--accent-green);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: 2px;
 }
@@ -298,15 +303,20 @@ body::after {
 
 .menu-hint {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 14px;
+  margin: 24px 0 32px;
 }
 
 .menu-hint strong { color: var(--text-yellow); }
 
 .menu-footer {
-  margin-top: 44px;
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  width: 100%;
+  text-align: center;
   color: #7a8a8a;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.9;
 }
 
@@ -330,7 +340,7 @@ body::after {
   padding: 10px 24px;
   background: var(--bg-hud);
   border-bottom: 1px solid #1a2a3a;
-  font-size: 14px;
+  font-size: 15px;
   flex-shrink: 0;
   z-index: 100;
   min-height: 48px;
@@ -345,13 +355,13 @@ body::after {
 .hud-label {
   color: var(--text-muted);
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 1.5px;
 }
 
 .hud-value {
   font-weight: 700;
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text-cyan);
 }
 
@@ -362,11 +372,11 @@ body::after {
 
 .hud-value.warning { color: var(--text-yellow); }
 
-/* V.O.I.D. logo — clickable to go back to menu */
+/* V.O.I.D. logo - clickable to go back to menu */
 #hud-title {
   color: var(--accent-green);
   font-weight: 700;
-  font-size: 16px;
+  font-size: 17px;
   letter-spacing: 3px;
   text-shadow: var(--glow-green);
   cursor: pointer;
@@ -447,7 +457,7 @@ body::after {
 .terminal-line {
   white-space: pre-wrap;
   word-wrap: break-word;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.7;
   min-height: 1.7em;
   max-width: 900px;
@@ -539,7 +549,7 @@ body::after {
 .panel-title {
   color: var(--text-cyan);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
 }
@@ -550,7 +560,7 @@ body::after {
   color: var(--text-muted);
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   padding: 2px 8px;
   border-radius: 3px;
   transition: all 0.2s;
@@ -573,7 +583,7 @@ body::after {
 
 .panel-empty {
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: 13px;
   text-align: center;
   padding: 24px 12px;
   line-height: 1.8;
@@ -592,7 +602,7 @@ body::after {
 
 .lesson-card .lesson-title {
   color: var(--text-cyan);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   margin-bottom: 6px;
   text-transform: uppercase;
@@ -601,13 +611,13 @@ body::after {
 
 .lesson-card .lesson-text {
   color: var(--text-white);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.75;
 }
 
 .lesson-card .lesson-source {
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: 13px;
   margin-top: 6px;
 }
 
@@ -625,7 +635,7 @@ body::after {
   cursor: pointer;
   padding: 16px 12px;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   writing-mode: vertical-rl;
   text-orientation: mixed;
@@ -649,7 +659,7 @@ body::after {
   display: inline-block;
   background: var(--accent-cyan);
   color: var(--bg-primary);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   padding: 1px 5px;
   border-radius: 8px;
@@ -693,7 +703,7 @@ body::after {
 
 .lesson-toast .toast-label {
   color: var(--accent-cyan);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -705,7 +715,7 @@ body::after {
   border-radius: 4px;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 17px;
   font-family: var(--font-mono);
   padding: 2px 8px;
   transition: all 0.2s;
@@ -715,20 +725,20 @@ body::after {
 
 .lesson-toast .toast-title {
   color: var(--text-white);
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 700;
   margin-bottom: 10px;
 }
 
 .lesson-toast .toast-text {
   color: var(--text-primary);
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.8;
 }
 
 .lesson-toast .toast-hint {
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: 11px;
   margin-top: 12px;
   text-align: center;
   letter-spacing: 1px;
@@ -769,7 +779,7 @@ body::after {
 
 .tutorial-label {
   color: var(--text-cyan);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 2px;
   text-transform: uppercase;
   margin-bottom: 6px;
@@ -777,7 +787,7 @@ body::after {
 
 .tutorial-title {
   color: var(--text-white);
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 700;
   letter-spacing: 1px;
   margin-bottom: 6px;
@@ -785,7 +795,7 @@ body::after {
 
 .tutorial-subtitle {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
   margin-bottom: 12px;
 }
 
@@ -823,7 +833,7 @@ body::after {
 
 .tutorial-step-title {
   color: var(--accent-green);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: 1px;
   margin-bottom: 10px;
@@ -833,7 +843,7 @@ body::after {
   margin: 0;
   padding-left: 18px;
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 2.0;
 }
 
@@ -943,7 +953,7 @@ body::after {
   padding: 8px 16px;
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 14px;
   border-radius: 4px;
   transition: all 0.2s ease;
   letter-spacing: 0.5px;
@@ -992,7 +1002,7 @@ body::after {
 .audit-badge {
   padding: 2px 6px;
   border-radius: 3px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   margin-left: auto;
   flex-shrink: 0;
@@ -1034,7 +1044,7 @@ body::after {
 
 .report-modal .report-section-title {
   color: var(--text-cyan);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -1047,7 +1057,7 @@ body::after {
   display: flex;
   justify-content: space-between;
   padding: 4px 0;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .report-modal .report-row .label { color: var(--text-muted); }
@@ -1074,7 +1084,7 @@ body::after {
   border-radius: 6px;
   color: var(--accent-cyan);
   font-family: var(--font-mono);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 2px;
   cursor: pointer;
@@ -1095,7 +1105,7 @@ body::after {
 }
 
 .report-cmd {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-muted);
   padding: 3px 0;
   font-family: var(--font-mono);
@@ -1105,7 +1115,7 @@ body::after {
 }
 
 .report-tip {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-yellow);
   padding: 3px 0;
 }
@@ -1130,7 +1140,7 @@ body::after {
 }
 
 .report-evaluation .eval-detail {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
   color: var(--text-primary);
   margin-bottom: 8px;
@@ -1231,14 +1241,14 @@ body::after {
 }
 
 .quiz-score-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
   letter-spacing: 1px;
   text-transform: uppercase;
 }
 
 .quiz-score-badge {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 12px;
@@ -1287,7 +1297,7 @@ body::after {
 }
 
 .audit-legend-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
   letter-spacing: 0.4px;
 }
@@ -1297,7 +1307,7 @@ body::after {
   grid-template-columns: 88px 120px 1fr auto;
   gap: 8px;
   align-items: center;
-  font-size: 12px;
+  font-size: 13px;
   font-family: var(--font-mono);
   padding: 4px 0;
   border-bottom: 1px dashed #1b2a36;
@@ -1316,7 +1326,7 @@ body::after {
 
 .audit-badge {
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 1px;
   padding: 2px 6px;
   border-radius: 10px;
@@ -1348,7 +1358,7 @@ body::after {
 }
 
 .audit-empty {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   padding: 6px 0;
   font-family: var(--font-mono);
@@ -1626,7 +1636,7 @@ body::after {
 
 .quiz-label {
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-cyan);
   letter-spacing: 2px;
@@ -1634,7 +1644,7 @@ body::after {
 }
 
 .quiz-subtitle {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text-muted);
 }
 
@@ -1659,7 +1669,7 @@ body::after {
 
 .quiz-question-number {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--text-yellow);
   margin-bottom: 8px;
   text-transform: uppercase;
@@ -1667,9 +1677,9 @@ body::after {
 }
 
 .quiz-question {
-  font-size: 16px;
+  font-size: 18px;
   color: #fff;
-  line-height: 1.5;
+  line-height: 1.65;
   margin-bottom: 24px;
 }
 
@@ -1684,7 +1694,7 @@ body::after {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 14px;
+  padding: 16px 18px;
   background: rgba(16, 24, 39, 0.6);
   border: 1px solid #1f2937;
   border-radius: 6px;
@@ -1734,8 +1744,8 @@ body::after {
 .quiz-option.wrong .quiz-option-key { color: var(--text-red); border-color: var(--text-red); }
 
 .quiz-option-text {
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 .quiz-explanation {
@@ -1758,7 +1768,7 @@ body::after {
 .quiz-explanation-header {
   font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 16px;
   margin-bottom: 8px;
 }
 
@@ -1766,9 +1776,9 @@ body::after {
 .quiz-explanation.wrong .quiz-explanation-header { color: var(--text-red); }
 
 .quiz-explanation-text {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .quiz-next-btn {
@@ -1779,6 +1789,7 @@ body::after {
   border: none;
   border-radius: 4px;
   font-family: var(--font-mono);
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 1px;
   cursor: pointer;
