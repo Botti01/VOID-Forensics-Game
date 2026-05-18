@@ -23,7 +23,20 @@ const EXPERT_TIER = {
   masquerade: true,               // exact system-process name impersonation
   memdumpDelayMs: 10000,          // 10 s simulated extraction time — kills before
                                   // this window expires lose the AES key
-  enableUtilities: true,          // ls / cat visible in help output
+  stripSuspiciousConnections: true, // remove suspicious connections from netscan
+                                    // so the analyst must use envars to find C2
+
+  // ── Malicious process environment injection ───────────────────────────────
+  // In expert mode the C2 address is hidden from netscan. The only way to
+  // discover it is to inspect the malware's environment variables.
+  maliciousEnvars: {
+    linux: [
+      { name: 'C2_ENDPOINT', value: '185.141.27.93:4443' },
+    ],
+    windows: [
+      { name: 'C2_ENDPOINT', value: '185.141.27.93:4443' },
+    ],
+  },
 
   // ── Malicious process appearance ──────────────────────────────────────────
   // The malware retains the same name and path as the legitimate daemon it

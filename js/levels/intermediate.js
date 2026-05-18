@@ -4,7 +4,6 @@
 // similar to a legitimate system process (one character substituted with a
 // digit). The analyst must inspect start times, parent PIDs, and memory
 // regions rather than relying on the process name alone.
-// Utility commands (ls, cat) are enabled to support deeper investigation.
 
 const INTERMEDIATE_TIER = {
   // ── Identity ──────────────────────────────────────────────────────────────
@@ -20,7 +19,6 @@ const INTERMEDIATE_TIER = {
   // ── Feature flags ─────────────────────────────────────────────────────────
   masquerade: true,               // malware mimics a real system process name
   memdumpDelayMs: 0,              // memdump completes instantly
-  enableUtilities: true,          // ls / cat visible in help output
 
   // ── Malicious process appearance ──────────────────────────────────────────
   // Linux:   rsys1ogd  — the lowercase letter 'l' is replaced with the digit '1'

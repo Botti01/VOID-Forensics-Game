@@ -1,8 +1,7 @@
 // js/levels/beginner.js — Beginner difficulty tier configuration for V.O.I.D.
 //
 // Malware uses an obviously suspicious name so the analyst can identify it
-// quickly. Encryption is slow. Utility commands (ls, cat) are hidden to keep
-// the interface focused on the core forensic workflow.
+// quickly. Encryption is slow.
 
 const BEGINNER_TIER = {
   // ── Identity ──────────────────────────────────────────────────────────────
@@ -18,7 +17,6 @@ const BEGINNER_TIER = {
   // ── Feature flags ─────────────────────────────────────────────────────────
   masquerade: false,              // malware name is NOT a system-process alias
   memdumpDelayMs: 0,              // memdump completes instantly
-  enableUtilities: false,         // ls / cat hidden from help output
 
   // ── Malicious process appearance ──────────────────────────────────────────
   // The malicious PID is renamed to a non-system name so it stands out in

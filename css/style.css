@@ -592,7 +592,7 @@ body::after {
 
 .lesson-card .lesson-title {
   color: var(--text-cyan);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   margin-bottom: 6px;
   text-transform: uppercase;
@@ -601,8 +601,8 @@ body::after {
 
 .lesson-card .lesson-text {
   color: var(--text-white);
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.75;
 }
 
 .lesson-card .lesson-source {
@@ -823,7 +823,7 @@ body::after {
 
 .tutorial-step-title {
   color: var(--accent-green);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 1px;
   margin-bottom: 10px;
@@ -833,8 +833,8 @@ body::after {
   margin: 0;
   padding-left: 18px;
   color: var(--text-primary);
-  font-size: 13px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 2.0;
 }
 
 .tutorial-list code {
@@ -1176,6 +1176,46 @@ body::after {
 }
 .report-evaluation.eval-d .eval-verdict {
   color: var(--text-red);
+}
+
+/* ============================================================
+   INTEL BASE — Lesson cards (report modal)
+   ============================================================ */
+.learning-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.lesson-item {
+  background: rgba(0, 255, 255, 0.04);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 4px;
+  padding: 10px 14px;
+}
+
+.lesson-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  letter-spacing: 0.4px;
+  margin-bottom: 5px;
+}
+
+.lesson-text {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text-primary);
+}
+
+.audit-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 8px 0;
 }
 
 .quiz-score-line {

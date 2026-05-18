@@ -38,11 +38,11 @@ const TUTORIAL_STEPS = [
     ],
   },
   {
-    title: 'Step 3 - The Golden Rule (Order of Volatility)',
+    title: 'Step 3 - Forensic Insights',
     items: [
-      'Always extract the AES key from memory before terminating the malware.',
-      'Run <code>memdump --pid &lt;PID&gt;</code> to capture volatile evidence.',
-      'Only then use <code>kill --pid &lt;PID&gt;</code> or the key is lost forever.',
+      'As you investigate, your actions will unlock <strong>Forensic Notes</strong> on the right side of the screen.',
+      'Each note explains a real-world Memory Forensics concept triggered by what you just discovered.',
+      'Keep an eye on this panel — it is your field guide throughout the investigation.',
     ],
   },
 ];
@@ -466,9 +466,12 @@ function showReportModal() {
               </div>
 
               <div class="report-section">
-                <div class="report-section-title">Penalties</div>
-                ${row('Innocent Kills', gameState.innocentKills + ' (\u2212' + (gameState.innocentKills * 50) + ' pts)', gameState.innocentKills > 0 ? 'fail' : '')}
-                ${row('Hints Used', String(gameState.hintsUsed))}
+                <div class="report-section-title">Investigation Results</div>
+                ${chk(gameState.foundMaliciousProcess, 'Malware Identified', malName + ' (PID ' + malPID + ')', 'Not identified')}
+                ${chk(gameState.foundC2Connection, 'C2 Server Found', 'External C2 connections detected', 'Not found')}
+                ${chk(gameState.foundInjectedCode, 'Injected Code', 'RWX memory detected via malfind', 'Not detected')}
+                ${chk(gameState.extractedKey, 'AES Key Recovered', gameState.aesKey, 'Key lost \u2014 files unrecoverable')}
+                ${chk(gameState.killedMalicious, 'Ransomware Killed', 'Process terminated', 'Still running')}
               </div>
             </div>
 
@@ -483,12 +486,9 @@ function showReportModal() {
               </div>
 
               <div class="report-section">
-                <div class="report-section-title">Investigation Results</div>
-                ${chk(gameState.foundMaliciousProcess, 'Malware Identified', malName + ' (PID ' + malPID + ')', 'Not identified')}
-                ${chk(gameState.foundC2Connection, 'C2 Server Found', 'External C2 connections detected', 'Not found')}
-                ${chk(gameState.foundInjectedCode, 'Injected Code', 'RWX memory detected via malfind', 'Not detected')}
-                ${chk(gameState.extractedKey, 'AES Key Recovered', gameState.aesKey, 'Key lost \u2014 files unrecoverable')}
-                ${chk(gameState.killedMalicious, 'Ransomware Killed', 'Process terminated', 'Still running')}
+                <div class="report-section-title">Penalties</div>
+                ${row('Innocent Kills', gameState.innocentKills + ' (\u2212' + (gameState.innocentKills * 50) + ' pts)', gameState.innocentKills > 0 ? 'fail' : '')}
+                ${row('Hints Used', gameState.hintsUsed + ' (\u2212' + (gameState.hintsUsed * 25) + ' pts)', gameState.hintsUsed > 0 ? 'fail' : '')}
               </div>
             </div>
           </div>

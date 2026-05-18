@@ -169,7 +169,6 @@ export function applyDifficultyTier(tierString) {
   gameState.difficultyFlags  = {
     masqueradeMode:  tier.masquerade,
     memdumpDelayMs:  tier.memdumpDelayMs,
-    enableUtilities: tier.enableUtilities,
   };
 
   // ── 3. Malicious process name override ────────────────────────────────────
@@ -215,6 +214,80 @@ export function applyDifficultyTier(tierString) {
     // should be pre-flagged for the player.
     gameState.suspiciousPIDs = [];
   }
+
+  // ── 6. Inject expert envars into malicious process ────────────────────────
+  // Expert tier hides the C2 from netscan and places it in an environment
+  // variable instead, forcing the analyst to use the envars command.
+  if (tier.maliciousEnvars && malProc) {
+    const envarList = tier.maliciousEnvars[osType] || [];
+    for (const ev of envarList) {
+      // Guard against duplicate injection on replay
+      if (!malProc.envars.some(e => e.name === ev.name)) {
+        malProc.envars.push({ ...ev });
+      }
+    }
+  }
+
+  // ── 7. Strip suspicious connections (expert tier) ─────────────────────────
+  // When stripSuspiciousConnections is true, remove all connections flagged
+  // as suspicious so netscan alone cannot reveal the C2 server.
+  if (tier.stripSuspiciousConnections) {
+    gameState.connections = gameState.connections.filter(c => !c.suspicious);
+  }
+
+  // ── 8. Scramble PIDs (anti-metagaming) ────────────────────────────────────
+  // Runs last so that all injected processes (decoys, overrides) are included.
+  scramblePIDs();
+}
+
+/**
+ * Randomise all process PIDs (> 10) to prevent players from memorising
+ * the malicious PID across sessions.
+ *
+ * Algorithm:
+ *  1. Build oldPid -> newPid mapping for every process with PID > 10.
+ *  2. Apply the new PIDs and remap PPID references.
+ *  3. Remap PIDs in gameState.connections.
+ *  4. Update gameState.maliciousPID and suspiciousPIDs.
+ */
+function scramblePIDs() {
+  const pidMapping = {};
+
+  // ── Step 1: generate unique random PIDs for every non-kernel process ───────
+  const usedPIDs = new Set();
+  // Pre-seed with kernel PIDs so we never collide with them
+  for (const p of gameState.processes) {
+    if (p.pid <= 10) usedPIDs.add(p.pid);
+  }
+
+  for (const proc of gameState.processes) {
+    if (proc.pid <= 10) continue; // keep kernel/init PIDs stable (1, 2 …)
+    let newPid;
+    do {
+      newPid = Math.floor(Math.random() * 9000) + 1000; // 1000-9999
+    } while (usedPIDs.has(newPid));
+    usedPIDs.add(newPid);
+    pidMapping[proc.pid] = newPid;
+  }
+
+  // ── Step 2: apply new PIDs and remap parent references ────────────────────
+  for (const proc of gameState.processes) {
+    if (pidMapping[proc.pid]  !== undefined) proc.pid  = pidMapping[proc.pid];
+    if (pidMapping[proc.ppid] !== undefined) proc.ppid = pidMapping[proc.ppid];
+  }
+
+  // ── Step 3: remap connection PIDs ─────────────────────────────────────────
+  for (const conn of gameState.connections) {
+    if (pidMapping[conn.pid] !== undefined) conn.pid = pidMapping[conn.pid];
+  }
+
+  // ── Step 4: update high-level PID references in game state ────────────────
+  if (pidMapping[gameState.maliciousPID] !== undefined) {
+    gameState.maliciousPID = pidMapping[gameState.maliciousPID];
+  }
+  gameState.suspiciousPIDs = gameState.suspiciousPIDs.map(
+    pid => pidMapping[pid] !== undefined ? pidMapping[pid] : pid
+  );
 }
 
 /**

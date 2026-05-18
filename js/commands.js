@@ -258,7 +258,6 @@ function cmdPstree() {
   function renderTree(proc, prefix, isLast) {
     const connector = prefix === '' ? '' : (isLast ? '└── ' : '├── ');
     let label = `${proc.name} (PID: ${proc.pid})`;
-    if (proc.service) label += ` [${proc.service}]`;
 
     printLine(`${prefix}${connector}${label}`);
 
@@ -293,16 +292,11 @@ function cmdNetscan() {
     const state = (c.state || '').padEnd(14);
     const pid = String(c.pid).padStart(6);
     const proc = c.process;
-
-    let flag = c.suspicious ? '  [!]' : '';
-    const cssClass = c.suspicious ? 'suspicious' : '';
-    printLine(`${proto} ${local} ${remote} ${state} ${pid}  ${proc}${flag}`, cssClass);
+    printLine(`${proto} ${local} ${remote} ${state} ${pid}  ${proc}`);
   }
 
   const suspCount = gameState.connections.filter(c => c.suspicious).length;
   if (suspCount > 0) {
-    printBlank();
-    printWarning(`[!] ${suspCount} suspicious connection(s) detected to external hosts.`);
     if (!gameState.foundC2Connection) {
       logAction(ACTION_TYPES.DISCOVERY, 'Identified external C2 connections', 'success');
     }
@@ -329,18 +323,17 @@ function cmdMalfind() {
 
     found = true;
     for (const region of rwxRegions) {
-      printWarning(`Process: ${p.name}  PID: ${p.pid}  Address: ${region.address}`);
-      printLine(`  Flags: ${region.flags}`);
-      printLine(`  Protection: ${region.protection}     [ALERT: RWX memory region]`, 'alert');
+      printLine(`Process: ${p.name}  PID: ${p.pid}  Address: ${region.address}`);
+      printLine(`  Flags:      ${region.flags}`);
+      printLine(`  Protection: ${region.protection}`);
       printBlank();
-      printLine(`  ${region.content}`, 'info');
+      printLine(`  ${region.content}`);
       printSeparator();
       printBlank();
     }
   }
 
   if (found) {
-    printWarning("[!] Injected code detected. Use 'yarascan --pid <PID>' or 'memdump --pid <PID>' for deeper analysis.");
     if (!gameState.foundInjectedCode) {
       logAction(ACTION_TYPES.DISCOVERY, 'Detected injected code via RWX memory regions', 'success');
     }
@@ -364,16 +357,16 @@ function cmdYarascan(args, flags) {
   printBlank();
 
   if (proc.yaraResults.length === 0) {
-    printSuccess(`No YARA matches found for ${proc.name} (PID: ${pid}).`);
-    printInfo("Process memory appears clean.");
+    printLine(`No YARA matches found for ${proc.name} (PID: ${pid}).`);
   } else {
-    printWarning(`[!] YARA matches found in ${proc.name} (PID: ${pid}):`);
-    printBlank();
+    const header = "Rule                         Offset              Match";
+    const sep    = "──────────────────────────── ─────────────────── ──────────────────────────────────────";
+    printLine(header, 'table-header');
+    printLine(sep, 'dim');
     for (const yr of proc.yaraResults) {
-      printLine(`  Rule:    ${yr.rule}`, 'warning');
-      printLine(`  Offset:  ${yr.offset}`);
-      printLine(`  Match:   ${yr.matchedString}`, 'info');
-      printSeparator();
+      const rule   = yr.rule.padEnd(28);
+      const offset = yr.offset.padEnd(19);
+      printLine(`${rule} ${offset} ${yr.matchedString}`);
     }
 
     if (proc.isMalicious) {
@@ -419,14 +412,10 @@ function cmdMemdump(args, flags) {
   const delayMs = gameState.difficultyFlags?.memdumpDelayMs || 0;
 
   if (delayMs > 0) {
-    // Expert tier: simulate realistic extraction latency.
-    // The game loop keeps running — encryption ticks while the analyst waits.
     const delaySec = Math.round(delayMs / 1000);
-    printWarning(`[!] Initiating volatile memory dump. This operation will take ~${delaySec} seconds...`);
-    printInfo('    Encryption continues while the dump is running. Do NOT close the terminal.');
+    printLine(`Dumping memory for ${proc.name} (PID: ${pid})... estimated time: ${delaySec}s`);
     printBlank();
 
-    // Disable input during extraction to prevent conflicting commands
     const termInput = document.getElementById('terminal-input');
     if (termInput) {
       termInput.disabled = true;
@@ -434,19 +423,18 @@ function cmdMemdump(args, flags) {
     }
 
     setTimeout(() => {
-      // Re-check that the process still exists (could have been killed mid-dump)
       const stillExists = gameState.processes.find(p => p.pid === pid);
       if (!stillExists) {
         printError('[✗] Process terminated during memory dump — extraction failed.');
         printBlank();
       } else {
-        // Print hex dump output
         if (proc.hexDump && proc.hexDump.length > 0) {
           for (const line of proc.hexDump) {
             let cssClass = '';
-            if (line.startsWith('[!]')) cssClass = 'warning';
-            else if (line.startsWith('0x')) cssClass = 'hex';
+            if (line.startsWith('0x')) cssClass = 'hex';
             else if (line.startsWith('Region:') || line.startsWith('Memory dump')) cssClass = 'header';
+            // Skip explicit [!] advisory lines — player reads the hex
+            if (line.startsWith('[!]')) continue;
             printLine(line, cssClass);
           }
         }
@@ -456,13 +444,15 @@ function cmdMemdump(args, flags) {
         }
         gameState.extractedKey = true;
         addScore(200, 'Extracted AES encryption key from memory');
-        printBlank();
-        printSuccess("★ AES key has been captured and logged as evidence.");
         triggerLesson('aes_key_extracted');
+        // Beginner tier: print explicit success — they cannot read hex dumps yet
+        if (gameState.difficulty === 'beginner') {
+          printBlank();
+          printSuccess('[*] SUCCESS: AES encryption key successfully extracted and logged as evidence.');
+        }
         printBlank();
       }
 
-      // Re-enable input
       if (termInput) {
         termInput.disabled = false;
         termInput.placeholder = 'Type a command...';
@@ -474,9 +464,10 @@ function cmdMemdump(args, flags) {
     if (proc.hexDump && proc.hexDump.length > 0) {
       for (const line of proc.hexDump) {
         let cssClass = '';
-        if (line.startsWith('[!]')) cssClass = 'warning';
-        else if (line.startsWith('0x')) cssClass = 'hex';
+        if (line.startsWith('0x')) cssClass = 'hex';
         else if (line.startsWith('Region:') || line.startsWith('Memory dump')) cssClass = 'header';
+        // Skip explicit [!] advisory lines — player reads the hex
+        if (line.startsWith('[!]')) continue;
         printLine(line, cssClass);
       }
 
@@ -485,9 +476,12 @@ function cmdMemdump(args, flags) {
       }
       gameState.extractedKey = true;
       addScore(200, 'Extracted AES encryption key from memory');
-      printBlank();
-      printSuccess("★ AES key has been captured and logged as evidence.");
       triggerLesson('aes_key_extracted');
+      // Beginner tier: print explicit success — they cannot read hex dumps yet
+      if (gameState.difficulty === 'beginner') {
+        printBlank();
+        printSuccess('[*] SUCCESS: AES encryption key successfully extracted and logged as evidence.');
+      }
     } else {
       printInfo(`Standard memory layout for ${proc.name}. No notable artifacts.`);
     }
@@ -515,12 +509,11 @@ function cmdHandles(args, flags) {
     for (const h of proc.handles) {
       const type = h.type.padEnd(10);
       const name = h.name.padEnd(55);
-      let cssClass = '';
+      // Detect suspicious handles for lesson trigger (no visual flag shown)
       if (h.name.includes('RansomVoid') || h.name.includes('lsass') || h.name.includes('SUSPICIOUS') || h.name.includes('shadowcrypt')) {
-        cssClass = 'suspicious';
         hasSusp = true;
       }
-      printLine(`${type} ${name} ${h.access}`, cssClass);
+      printLine(`${type} ${name} ${h.access}`);
     }
     if (hasSusp) triggerLesson('suspicious_handles');
   }
@@ -546,9 +539,10 @@ function cmdDlllist(args, flags) {
     let hasInjectedLib = false;
     for (const d of proc.dlls) {
       const isSusp = d.path.includes('SUSPICIOUS') || d.path.includes('Temp\\') || d.path.includes('libshadow');
-      const cssClass = isSusp ? 'suspicious' : '';
       if (isSusp) hasInjectedLib = true;
-      printLine(`${d.base}   ${d.size.padEnd(12)}  ${d.path}`, cssClass);
+      // Strip the inline [!] SUSPICIOUS annotation from the path string
+      const cleanPath = d.path.replace(/\s*\[!\].*$/, '');
+      printLine(`${d.base}   ${d.size.padEnd(12)}  ${cleanPath}`);
     }
     if (hasInjectedLib) triggerLesson('ld_preload_detected');
   }
@@ -572,10 +566,9 @@ function cmdEnvars(args, flags) {
     let hasC2Endpoint = false;
     for (const e of proc.envars) {
       const isSusp = (e.name === 'PSExecutionPolicyPreference' || e.name === 'LD_PRELOAD' || e.name === 'SHADOW_C2' || e.name === 'C2_ENDPOINT');
-      const cssClass = isSusp ? 'suspicious' : '';
       if (e.name === 'LD_PRELOAD') hasLdPreload = true;
       if (e.name === 'C2_ENDPOINT') hasC2Endpoint = true;
-      printLine(`  ${e.name} = ${e.value}`, cssClass);
+      printLine(`  ${e.name} = ${e.value}`);
     }
     if (hasLdPreload) triggerLesson('ld_preload_detected');
 

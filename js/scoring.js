@@ -358,6 +358,14 @@ export function applySpeedBonus() {
     const speedBonus = Math.floor(timeRatio * 250);
     addScore(speedBonus, 'Speed bonus (time remaining)');
   }
+
+  // Deduct hard point penalty for every hint used (-25 pts each).
+  // The live cmdHint already charged time and encryption pressure;
+  // this ensures hints also reduce the final numeric score.
+  if (gameState.hintsUsed > 0) {
+    const hintPenalty = gameState.hintsUsed * 25;
+    addScore(-hintPenalty, `Hint penalty (${gameState.hintsUsed} hint(s) used)`);
+  }
 }
 
 /**

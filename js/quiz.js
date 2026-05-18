@@ -1,62 +1,188 @@
 // js/quiz.js — Post-Investigation Quiz System for V.O.I.D.
 // Measures learning outcome after the investigation.
+// Questions are drawn randomly from a pool to prevent metagaming.
 
 import gameState from './gameState.js';
 
-// ── Question Bank ──────────────────────────────────────────────────────────────
+// ── Beginner Question Pool (10 questions) ─────────────────────────────────────
+// Each question targets a core Memory Forensics concept covered in the
+// Beginner scenario. correctIndex is 0-based (matches the options array).
 
-const POST_QUIZ_QUESTIONS = [
+export const BEGINNER_QUIZ_POOL = [
   {
-    id: 'post_1',
-    question: 'During this investigation, why was it critical to extract the AES key BEFORE killing the ransomware process?',
+    id: 'b_1',
+    tier: 'beginner',
+    question: 'Why is it critical to extract the AES key BEFORE killing the ransomware process?',
     options: [
-      { key: 'A', text: 'Because killing the process would crash the entire server' },
-      { key: 'B', text: 'Because the encryption key only existed in the process\'s volatile memory — once killed, it would be lost forever' },
-      { key: 'C', text: 'Because the process needed to be running for the antivirus to detect it' },
-      { key: 'D', text: 'Because the key was stored in a file that gets deleted on process termination' },
+      'Killing the process would crash the entire server.',
+      'The key exists only in volatile memory — it is lost forever once the process is killed.',
+      'The process needs to be running for antivirus to detect it.',
+      'The key is stored in a file that is deleted on process termination.',
     ],
-    correct: 'B',
-    explanation: 'The AES key was held exclusively in the ransomware\'s RAM. This is a textbook application of the Order of Volatility — volatile evidence (RAM) must be captured before any remediation action that would destroy it.',
+    correctIndex: 1,
+    explanation: 'The AES key is held exclusively in the ransomware\'s RAM. This is a textbook application of the Order of Volatility: volatile evidence must be captured before any remediation action that would destroy it.',
   },
   {
-    id: 'post_2',
-    question: 'Which forensic technique reveals injected code hiding inside a legitimate process?',
+    id: 'b_2',
+    tier: 'beginner',
+    question: 'Which Volatility plugin reveals injected code hiding inside a legitimate process?',
     options: [
-      { key: 'A', text: 'netscan — scanning for network connections' },
-      { key: 'B', text: 'pstree — viewing the process tree hierarchy' },
-      { key: 'C', text: 'malfind — detecting anomalous memory regions (RWX) that suggest code injection' },
-      { key: 'D', text: 'handles — listing open file handles' },
+      'netscan — scans for active network connections.',
+      'pstree — displays the parent-child process hierarchy.',
+      'malfind — detects anomalous RWX memory regions indicating code injection.',
+      'handles — lists open file and object handles.',
     ],
-    correct: 'C',
-    explanation: 'The malfind plugin scans process memory for regions with suspicious permissions (RWX), which indicate injected shellcode, DLL injection, or process hollowing — techniques used by attackers to hide malicious code inside trusted processes.',
+    correctIndex: 2,
+    explanation: 'malfind scans process memory for regions with suspicious permissions (rwxp). These Read-Write-Execute anonymous mappings are a strong indicator of injected shellcode, DLL injection, or process hollowing.',
   },
   {
-    id: 'post_3',
-    question: 'How can you identify a disguised malicious process using parent-child relationships?',
+    id: 'b_3',
+    tier: 'beginner',
+    question: 'What does a suspicious "PPID" (Parent PID) reveal in a forensic investigation?',
     options: [
-      { key: 'A', text: 'By checking if the process has a high PID number' },
-      { key: 'B', text: 'By verifying that system daemons were started at boot time and have the expected parent process (e.g., systemd or services.exe)' },
-      { key: 'C', text: 'By looking at the process name — malware always uses random characters' },
-      { key: 'D', text: 'By measuring the process CPU usage over time' },
+      'It tells you how much CPU the process is using.',
+      'It reveals which process spawned the suspect — an unusual parent can expose the attack chain.',
+      'It indicates how many threads the process has created.',
+      'It shows which user account owns the process.',
     ],
-    correct: 'B',
-    explanation: 'System services like rsyslogd (Linux) or svchost.exe (Windows) should be children of systemd/services.exe and start at boot. A daemon spawning hours after boot with an unusual parent is a critical anomaly indicating it was likely created by an attacker.',
+    correctIndex: 1,
+    explanation: 'System daemons (e.g., rsyslogd, svchost.exe) should always be children of a known init process (systemd or services.exe). A daemon with an unexpected parent — such as a web server worker — is a critical anomaly.',
+  },
+  {
+    id: 'b_4',
+    tier: 'beginner',
+    question: 'What is "Order of Volatility" in digital forensics?',
+    options: [
+      'A ranking of how dangerous different types of malware are.',
+      'A method for sorting network packets by priority.',
+      'A principle stating that the most transient evidence (RAM) must be collected first before less volatile sources.',
+      'A rule requiring investigators to shut down a system immediately upon discovery.',
+    ],
+    correctIndex: 2,
+    explanation: 'Order of Volatility (RFC 3227) dictates collection order: RAM → swap → running processes → network state → disk. Evidence in RAM is destroyed on power-off, making it the top priority in live forensics.',
+  },
+  {
+    id: 'b_5',
+    tier: 'beginner',
+    question: 'What does the memory protection flag "rwxp" indicate about a memory region?',
+    options: [
+      'The memory is Read-Only and cannot be modified.',
+      'The memory is Read-Write-Execute and Private — common for injected shellcode.',
+      'The memory is shared between multiple processes.',
+      'The memory belongs to a kernel module.',
+    ],
+    correctIndex: 1,
+    explanation: '"rwxp" means the memory region is Readable, Writable, and Executable — and Private (not shared). Legitimate code segments are typically only readable and executable (r-xp). An anonymous rwxp mapping is a textbook sign of dynamically injected code.',
+  },
+  {
+    id: 'b_6',
+    tier: 'beginner',
+    question: 'Which technique does LD_PRELOAD injection use to compromise a process?',
+    options: [
+      'It replaces the kernel scheduler with a malicious version.',
+      'It injects a malicious shared library that is loaded before all others, hijacking function calls.',
+      'It overwrites the process\'s executable on disk with malicious code.',
+      'It sends a signal to the target process to load a remote library over the network.',
+    ],
+    correctIndex: 1,
+    explanation: 'LD_PRELOAD is a Linux environment variable that forces shared libraries to be loaded before all others. Attackers abuse it to hook system calls — for example, intercepting read/write operations to encrypt files transparently.',
+  },
+  {
+    id: 'b_7',
+    tier: 'beginner',
+    question: 'In a live forensics investigation, why should you NOT shut down the compromised server immediately?',
+    options: [
+      'Shutdown would alert the attacker and give them time to escape.',
+      'The malware has a watchdog that reinstalls itself on reboot.',
+      'Critical evidence such as encryption keys and running process state exists only in RAM and would be irretrievably lost.',
+      'The server logs are stored in memory and would be deleted.',
+    ],
+    correctIndex: 2,
+    explanation: 'RAM is volatile: any data held there — encryption keys, decrypted payloads, active network state — is permanently destroyed on shutdown. Live forensics preserves this evidence before any remediation.',
+  },
+  {
+    id: 'b_8',
+    tier: 'beginner',
+    question: 'What is the primary goal of the "memdump" command in a ransomware investigation?',
+    options: [
+      'To forcibly terminate the ransomware process.',
+      'To capture a binary snapshot of a process\'s memory space, preserving volatile evidence like encryption keys.',
+      'To list all files that have been encrypted by the ransomware.',
+      'To scan the process memory for known malware signatures.',
+    ],
+    correctIndex: 1,
+    explanation: 'memdump creates a binary image of a process\'s entire virtual address space. In a ransomware scenario, the AES key used for encryption is held in memory and must be extracted this way before the process is terminated.',
+  },
+  {
+    id: 'b_9',
+    tier: 'beginner',
+    question: 'A web server process (apache2) has spawned a bash shell at 13:45, hours after boot. What does this most likely indicate?',
+    options: [
+      'A routine scheduled maintenance task run by the system administrator.',
+      'A normal behaviour for Apache during high traffic periods.',
+      'A webshell exploit — an attacker uploaded a malicious script that spawned a reverse shell.',
+      'A crash handler launched by the kernel to recover from a fault.',
+    ],
+    correctIndex: 2,
+    explanation: 'Web servers should never spawn interactive shells. A bash child of apache2 hours after boot strongly suggests a webshell was uploaded and executed by an attacker, providing them with remote command execution.',
+  },
+  {
+    id: 'b_10',
+    tier: 'beginner',
+    question: 'What is "process masquerading" in the context of malware evasion?',
+    options: [
+      'A technique where the malware encrypts its own process memory to avoid scanning.',
+      'When malware adopts the name and path of a legitimate system process to blend in with normal activity.',
+      'A method of migrating a process to a different CPU core to avoid detection.',
+      'When malware registers itself as a kernel driver to gain elevated privileges.',
+    ],
+    correctIndex: 1,
+    explanation: 'Process masquerading (also called process impersonation) involves naming a malicious process identically to a legitimate system daemon (e.g., svchost.exe or rsyslogd). The analyst must rely on start time, PPID, and memory analysis — not the name alone — to identify it.',
   },
 ];
 
-// ── Quiz UI Renderer ───────────────────────────────────────────────────────────
+// ── Question Sampler ──────────────────────────────────────────────────────────
+
+/**
+ * Return `count` random questions from the pool filtered by tier.
+ * Uses a Fisher-Yates shuffle so questions differ each session.
+ *
+ * @param {string} tier  - Difficulty tier ('beginner' | 'intermediate' | 'expert')
+ * @param {number} count - Number of questions to return (default: 3)
+ * @returns {object[]}   - Sampled question objects
+ */
+export function getRandomQuestions(tier = 'beginner', count = 3) {
+  // Filter to the requested tier; fall back to the full pool if none match.
+  let pool = BEGINNER_QUIZ_POOL.filter(q => q.tier === tier);
+  if (pool.length === 0) pool = [...BEGINNER_QUIZ_POOL];
+
+  // Fisher-Yates in-place shuffle on a shallow copy
+  const shuffled = [...pool];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
+// ── Quiz UI Renderer ──────────────────────────────────────────────────────────
 
 /**
  * Show a quiz modal and return a Promise that resolves with the score (0-3).
- * @returns {Promise<number>} — score (number of correct answers)
+ * Questions are sampled dynamically from the pool via getRandomQuestions().
+ *
+ * @returns {Promise<number>} — number of correct answers (0–3)
  */
 export function showQuiz() {
-  const questions = POST_QUIZ_QUESTIONS;
+  // Draw 3 random questions for the active difficulty tier.
+  const questions = getRandomQuestions(gameState.difficulty || 'beginner', 3);
+  const total = questions.length;
   const title = 'POST-INVESTIGATION VERIFICATION';
   const subtitle = 'Confirm what you learned during the investigation.';
 
   return new Promise((resolve) => {
-    // Clean up any previous quiz
+    // Remove any previous quiz overlay
     document.querySelectorAll('.quiz-backdrop, .quiz-modal').forEach(el => el.remove());
 
     const backdrop = document.createElement('div');
@@ -66,72 +192,80 @@ export function showQuiz() {
     const modal = document.createElement('div');
     modal.className = 'quiz-modal';
 
-    // State
+    // Per-session state
     let currentQ = 0;
     let score = 0;
-    const answers = new Array(questions.length).fill(null);
+    const answers = new Array(total).fill(null); // null | correctIndex | wrong index
 
     function render() {
       const q = questions[currentQ];
-      const isLast = currentQ === questions.length - 1;
-      const hasAnswered = answers[currentQ] !== null;
+      const isLast = currentQ === total - 1;
+      const selectedIndex = answers[currentQ]; // null or 0-based option index
+      const hasAnswered = selectedIndex !== null;
+      const isCorrect = hasAnswered && selectedIndex === q.correctIndex;
 
       modal.innerHTML = `
         <div class="quiz-header">
           <div class="quiz-label">${title}</div>
           <div class="quiz-subtitle">${subtitle}</div>
           <div class="quiz-progress">
-            ${questions.map((_, i) => `
-              <div class="quiz-dot ${i < currentQ ? 'done' : ''} ${i === currentQ ? 'active' : ''} ${answers[i] !== null && i === currentQ ? (answers[i] === questions[i].correct ? 'correct' : 'wrong') : ''}"></div>
-            `).join('')}
+            ${questions.map((_, i) => {
+              let cls = 'quiz-dot';
+              if (i < currentQ)  cls += ' done';
+              if (i === currentQ) cls += ' active';
+              if (answers[i] !== null && i === currentQ) {
+                cls += answers[i] === questions[i].correctIndex ? ' correct' : ' wrong';
+              }
+              return `<div class="${cls}"></div>`;
+            }).join('')}
           </div>
         </div>
 
-        <div class="quiz-question-number">Question ${currentQ + 1} of ${questions.length}</div>
+        <div class="quiz-question-number">Question ${currentQ + 1} of ${total}</div>
         <div class="quiz-question">${q.question}</div>
 
         <div class="quiz-options">
-          ${q.options.map(opt => {
+          ${q.options.map((text, idx) => {
+            const keys = ['A', 'B', 'C', 'D'];
             let cls = 'quiz-option';
             if (hasAnswered) {
-              if (opt.key === q.correct) cls += ' correct';
-              else if (opt.key === answers[currentQ] && opt.key !== q.correct) cls += ' wrong';
-              else cls += ' disabled';
+              if (idx === q.correctIndex)          cls += ' correct';
+              else if (idx === selectedIndex)      cls += ' wrong';
+              else                                 cls += ' disabled';
             }
-            return `<button class="${cls}" data-key="${opt.key}" ${hasAnswered ? 'disabled' : ''}>
-              <span class="quiz-option-key">${opt.key}</span>
-              <span class="quiz-option-text">${opt.text}</span>
+            return `<button class="${cls}" data-idx="${idx}" ${hasAnswered ? 'disabled' : ''}>
+              <span class="quiz-option-key">${keys[idx]}</span>
+              <span class="quiz-option-text">${text}</span>
             </button>`;
           }).join('')}
         </div>
 
         ${hasAnswered ? `
-          <div class="quiz-explanation ${answers[currentQ] === q.correct ? 'correct' : 'wrong'}">
-            <div class="quiz-explanation-header">${answers[currentQ] === q.correct ? '✓ Correct!' : '✗ Incorrect'}</div>
+          <div class="quiz-explanation ${isCorrect ? 'correct' : 'wrong'}">
+            <div class="quiz-explanation-header">${isCorrect ? '✓ Correct!' : '✗ Incorrect'}</div>
             <div class="quiz-explanation-text">${q.explanation}</div>
           </div>
           <button class="quiz-next-btn">${isLast ? '▶ VIEW REPORT' : '▶ NEXT QUESTION'}</button>
         ` : ''}
       `;
 
-      // Bind option clicks (only if not answered)
+      // Bind option clicks (only when the question has not yet been answered)
       if (!hasAnswered) {
         modal.querySelectorAll('.quiz-option').forEach(btn => {
           btn.addEventListener('click', () => {
-            const key = btn.dataset.key;
-            answers[currentQ] = key;
-            if (key === q.correct) score++;
+            const idx = parseInt(btn.dataset.idx, 10);
+            answers[currentQ] = idx;
+            if (idx === q.correctIndex) score++;
             render();
           });
         });
       }
 
-      // Bind next/finish button
+      // Bind the next / finish button
       const nextBtn = modal.querySelector('.quiz-next-btn');
       if (nextBtn) {
         nextBtn.addEventListener('click', () => {
           if (isLast) {
-            // Save score and close
             gameState.postQuizScore = score;
             backdrop.remove();
             modal.remove();
