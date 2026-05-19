@@ -68,6 +68,9 @@ const gameState = {
 
   // --- Quiz Assessment ---
   postQuizScore: 0,
+
+  // --- Exit confirmation ---
+  awaitingExitConfirm: false,
 };
 
 export const ACTION_TYPES = {
@@ -325,6 +328,7 @@ export function initState(scenario) {
   gameState.extractedKey = false;
   gameState.killedMalicious = false;
   gameState.hints = scenario.hints ? [...scenario.hints] : [];
+  gameState.awaitingExitConfirm = false;
 
   // Quiz score is set by quiz.js via gameState.postQuizScore
   gameState.postQuizScore = 0;

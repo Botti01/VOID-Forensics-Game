@@ -2,7 +2,7 @@
 
 import gameState, { initState, logAction, ACTION_TYPES, applyDifficultyTier } from './gameState.js';
 import { getScenario } from './scenario.js';
-import { initTerminal, printIntro, printBlank, clearTerminal } from './terminal.js';
+import { initTerminal, printIntro, printLine, printBlank, clearTerminal } from './terminal.js';
 import { parseCommand } from './parser.js';
 import { bindClear } from './commands.js';
 import { startGameLoop, stopGameLoop } from './gameLoop.js';
@@ -18,6 +18,9 @@ import { showQuiz } from './quiz.js';
 let selectedOS = 'linux';
 let selectedDifficulty = 'beginner';
 let playerName = '';
+let awaitingMissionStart = false;
+let missionAcceptHandler = null;
+let skipQuizAfterReport = false;
 
 const TUTORIAL_SEEN_KEY = 'void_has_seen_tutorial';
 const TUTORIAL_STEPS = [
@@ -47,7 +50,11 @@ const TUTORIAL_STEPS = [
   },
 ];
 
-document.addEventListener('DOMContentLoaded', () => { setupMenu(); });
+document.addEventListener('DOMContentLoaded', () => {
+  setupMenu();
+});
+
+document.addEventListener('void:exit', () => returnToMenu(true));
 
 function setupMenu() {
   const nameInput = document.getElementById('player-name');
@@ -78,11 +85,11 @@ function setupMenu() {
   });
 
   nameInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && playerName.length > 0) launchGame();
+    if (e.key === 'Enter' && playerName.length > 0) startMissionBriefing();
   });
 
   startBtn.addEventListener('click', () => {
-    if (playerName.length > 0) launchGame();
+    if (playerName.length > 0) startMissionBriefing();
   });
 
   if (tutorialBtn) {
@@ -94,15 +101,23 @@ function setupMenu() {
   });
 }
 
-async function launchGame() {
+function startMissionBriefing() {
+  if (playerName.length === 0) return;
+  skipQuizAfterReport = false;
+  launchGame();
+}
+
+async function launchGame(scenarioOverride = null) {
   // Reset for new game
   resetLessons();
   resetScoring();
 
-  const scenario = getScenario(selectedOS);
+  const scenario = scenarioOverride || getScenario(selectedOS);
   initState(scenario);
   applyDifficultyTier(selectedDifficulty);
   gameState.playerName = playerName;
+  gameState.awaitingExitConfirm = false;
+  awaitingMissionStart = false;
 
   logAction(
     ACTION_TYPES.SESSION_START,
@@ -164,16 +179,34 @@ async function launchGame() {
   startIntroSequence(scenario);
 }
 
-function returnToMenu() {
-  if (gameState.gamePhase === 'playing') {
+function returnToMenu(force = false) {
+  if (!force && gameState.gamePhase === 'playing') {
     if (!confirm('Abort the current investigation and return to menu?')) return;
   }
+  if (force) skipQuizAfterReport = true;
   stopGameLoop();
   gameState.gamePhase = 'loading';
+  gameState.awaitingExitConfirm = false;
+  awaitingMissionStart = false;
   document.getElementById('game-view').classList.add('hidden');
   document.getElementById('results-page').classList.add('hidden');
   document.getElementById('start-menu').classList.remove('hidden');
   document.querySelectorAll('.lesson-toast, .toast-backdrop, .report-backdrop, .report-modal, .tutorial-backdrop, .tutorial-modal').forEach(t => t.remove());
+  const gameOver = document.getElementById('game-over-screen');
+  if (gameOver) {
+    gameOver.classList.add('hidden');
+    gameOver.classList.remove('visible');
+  }
+  clearMissionPrompt();
+  const input = document.getElementById('terminal-input');
+  if (input && missionAcceptHandler) {
+    input.removeEventListener('keydown', missionAcceptHandler, true);
+  }
+  if (input) {
+    input.readOnly = false;
+    input.value = '';
+    input.placeholder = 'Type a command...';
+  }
   document.getElementById('player-name').focus();
 }
 
@@ -197,7 +230,16 @@ function setupLearningPanel() {
   });
 }
 
-async function startIntroSequence(scenario) {
+async function startIntroSequence(scenario, options = {}) {
+  const skipTutorial = options.skipTutorial === true;
+  if (!skipTutorial && !hasSeenTutorial()) {
+    showTutorialOverlay({
+      mode: 'auto',
+      onClose: () => startIntroSequence(scenario, { skipTutorial: true }),
+    });
+    return;
+  }
+
   await printIntro([
     `[SYSTEM] Forensic Analysis Interface v2.6.1`,
     `[SYSTEM] Analyst: ${playerName}`,
@@ -207,13 +249,67 @@ async function startIntroSequence(scenario) {
     "",
   ], () => {});
 
-  await printIntro(scenario.meta.briefing, () => {
-    if (!hasSeenTutorial()) {
-      showTutorialOverlay({ mode: 'auto', onClose: beginGameplay });
+  await printIntro(scenario.meta.briefing, () => {});
+  showMissionPrompt();
+}
+
+function showMissionPrompt() {
+  clearMissionPrompt();
+  awaitingMissionStart = true;
+  const input = document.getElementById('terminal-input');
+  if (input) {
+    input.readOnly = true;
+    input.value = '';
+    input.placeholder = 'Press Enter to start.';
+    input.focus();
+  }
+  printLine('[!] PRESS ENTER TO ACCEPT MISSION AND START TIMER', 'mission-accept');
+  bindMissionAccept();
+}
+
+function clearMissionPrompt() {
+  document.querySelectorAll('.terminal-line.mission-accept').forEach(el => el.remove());
+}
+
+function bindMissionAccept() {
+  const input = document.getElementById('terminal-input');
+  if (!input) return;
+
+  if (missionAcceptHandler) {
+    input.removeEventListener('keydown', missionAcceptHandler, true);
+  }
+
+  missionAcceptHandler = (e) => {
+    if (!awaitingMissionStart) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      acceptMission();
       return;
     }
-    beginGameplay();
-  });
+
+    if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Delete') {
+      e.preventDefault();
+    }
+  };
+
+  input.addEventListener('keydown', missionAcceptHandler, true);
+}
+
+function acceptMission() {
+  if (!awaitingMissionStart) return;
+  awaitingMissionStart = false;
+  clearMissionPrompt();
+
+  const input = document.getElementById('terminal-input');
+  if (input) {
+    input.readOnly = false;
+    input.value = '';
+    input.placeholder = 'Type a command...';
+    input.focus();
+  }
+
+  beginGameplay();
 }
 
 function beginGameplay() {
@@ -360,20 +456,52 @@ function onGameOver() {
   showEndGameUI();
 }
 
-function showEndGameUI() {
+async function showEndGameUI() {
   const termInput = document.getElementById('terminal-input');
   if (termInput) {
     termInput.disabled = true;
     termInput.placeholder = 'Investigation complete.';
   }
 
-  // Wait for any active lesson toast, then show post-quiz, then report
-  waitForToastDismiss()
-    .then(() => showQuiz())
-    .then(() => showReportModal());
+  const isWin = gameState.gamePhase === 'won';
+
+  await waitForToastDismiss();
+  if (!isWin) {
+    await showGameOverScreen();
+  }
+  if (skipQuizAfterReport) {
+    showResultsPage();
+    return;
+  }
+  await showQuiz();
+  showReportModal();
 }
 
-function showReportModal() {
+function showGameOverScreen() {
+  const screen = document.getElementById('game-over-screen');
+  if (!screen) return Promise.resolve();
+
+  const title = document.getElementById('game-over-title');
+  if (title) title.textContent = 'GAME OVER';
+
+  screen.classList.remove('hidden');
+  requestAnimationFrame(() => screen.classList.add('visible'));
+
+  return new Promise((resolve) => {
+    const showMs = 2700;
+    const fadeMs = 300;
+    setTimeout(() => {
+      screen.classList.remove('visible');
+      setTimeout(() => {
+        screen.classList.add('hidden');
+        resolve();
+      }, fadeMs);
+    }, showMs);
+  });
+}
+
+function showReportModal(options = {}) {
+  const onClose = options.onClose || null;
   // Remove stale modals
   document.querySelectorAll('.report-backdrop, .report-modal, .continue-btn-wrapper').forEach(el => el.remove());
 
@@ -575,6 +703,10 @@ function showReportModal() {
   modal.querySelector('.report-continue').addEventListener('click', () => {
     backdrop.remove();
     modal.remove();
+    if (onClose) {
+      onClose();
+      return;
+    }
     showResultsPage();
   });
 }
@@ -639,7 +771,7 @@ function showResultsPage() {
   rb.parentNode.replaceChild(nrb, rb);
   const nmb = mb.cloneNode(true);
   mb.parentNode.replaceChild(nmb, mb);
-  nrb.addEventListener('click', () => launchGame());
+  nrb.addEventListener('click', () => startMissionBriefing());
   nmb.addEventListener('click', () => returnToMenu());
 }
 

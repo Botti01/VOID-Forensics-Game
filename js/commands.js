@@ -24,6 +24,7 @@ const COMMANDS = {
   kill:     { handler: cmdKill,     desc: "Terminate a process and its children (--pid <PID>)" },
   status:   { handler: cmdStatus,   desc: "Show current encryption %, time remaining, score" },
   clear:    { handler: cmdClear,    desc: "Clear the terminal screen" },
+  exit:     { handler: cmdExit,     desc: "Abort the investigation and return to menu" },
   mute:     { handler: cmdMute,     desc: "Toggle sound effects on/off" },
   tutorial: { handler: cmdTutorial, desc: "Open the interactive tutorial overlay" },
 
@@ -716,6 +717,23 @@ function cmdCat(args) {
 function cmdClear() {
   const { clearTerminal } = require_terminal();
   clearTerminal();
+}
+
+function cmdExit() {
+  if (gameState.gamePhase !== 'playing') {
+    printWarning('No active investigation to abort.');
+    return;
+  }
+
+  if (gameState.awaitingExitConfirm) {
+    printWarning('Exit confirmation is already pending. Type y or n.');
+    return;
+  }
+
+  gameState.awaitingExitConfirm = true;
+  printBlank();
+  printWarning("[!] Are you sure you want to abort the investigation? Type 'y' to confirm or 'n' to cancel.");
+  printBlank();
 }
 
 // Avoid circular import: terminal clear is bound in main.js

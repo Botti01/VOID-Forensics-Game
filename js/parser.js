@@ -2,7 +2,7 @@
 // Tokenizes raw CLI input and dispatches to command handlers.
 
 import { executeCommand } from './commands.js';
-import { printError } from './terminal.js';
+import { printInfo, printWarning } from './terminal.js';
 import gameState from './gameState.js';
 
 /**
@@ -10,6 +10,20 @@ import gameState from './gameState.js';
  * @param {string} raw - The raw user input string
  */
 export function parseCommand(raw) {
+  if (gameState.awaitingExitConfirm) {
+    const answer = raw.trim().toLowerCase();
+    gameState.awaitingExitConfirm = false;
+
+    if (answer === 'y' || answer === 'yes') {
+      printWarning('Abort confirmed. Returning to menu.');
+      document.dispatchEvent(new CustomEvent('void:exit'));
+      return;
+    }
+
+    printInfo('Exit canceled. Investigation continues.');
+    return;
+  }
+
   if (gameState.gamePhase !== 'playing') {
     // Allow 'report' during won/lost
     if (gameState.gamePhase === 'won' || gameState.gamePhase === 'lost') {

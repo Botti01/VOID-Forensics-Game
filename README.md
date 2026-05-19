@@ -10,6 +10,10 @@ V.O.I.D. is a browser-based **Live Incident Response simulator** built entirely 
 
 The machine cannot be shut down — critical decryption keys exist **only in volatile memory** (RAM). The player must race against the clock, using forensic analysis tools to identify the malicious process, extract the AES encryption key from its memory, and terminate the ransomware before all corporate data is encrypted.
 
+## Objective and Live Response
+
+Your objective is to identify the ransomware process, extract the AES key from memory, and stop the encryption before data loss. This is a live incident response simulation, so the server stays online while time and encryption continue to advance. Volatile evidence disappears the moment you terminate the malware, so capture memory first.
+
 ### Key Features
 - **Dual OS Scenarios** — Choose between a Linux (Ubuntu Server) or Windows (Windows Server 2019) investigation, each with a completely different attack chain
 - **Real-Time Pressure** — A countdown timer and live encryption progress create authentic incident response stress
@@ -37,6 +41,8 @@ The game runs entirely client-side in the browser — no backend, no VM, no inst
 - **AI-Assisted Development:** As approved by the professor, the technical scaffolding (terminal UI, command parser, game loop) was developed with AI assistance, allowing the author to focus on forensic accuracy and educational content design
 
 ## 🚀 Quick Start
+
+Play on GitHub Pages: https://botti01.github.io/VOID-Forensics-Game/
 
 ```bash
 # Clone the repository
