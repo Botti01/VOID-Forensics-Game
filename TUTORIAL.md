@@ -29,20 +29,30 @@ When the game loads, you'll see the V.O.I.D. start screen:
 2. **Select the target OS** — Linux (Ubuntu Server) or Windows (Windows Server 2019).
 3. Click **"BEGIN INVESTIGATION"** (or press Enter)
 
-### Step 2 — Read the Briefing
-The terminal will display a classified briefing explaining:
+### Step 2 — Interactive Tutorial
+On your first run, an interactive tutorial overlay explains the HUD, terminal controls, and the Forensic Notes panel.
+
+### Step 3 — Read the Briefing
+The terminal then displays a classified briefing explaining:
 - What server has been compromised
 - What type of attack is underway (active ransomware)
 - Why the server cannot be shut down (volatile evidence = AES key in RAM)
 - Your 3-part mission
 
-### Step 3 — Investigate
+The timer starts only after the briefing and after you press Enter at the mission prompt.
+
+### Step 4 — Investigate
 Use forensic commands to analyze the system. The **HUD bar** at the top shows:
 - ⏱ **Time Remaining** — you have 10 minutes
-- 🔴 **Encryption Progress** — files are being encrypted in real-time
+- 🔴 **Encryption Progress** — files are being encrypted in real time
 - 🏆 **Score** — your investigation performance
 
-### Step 4 — Win or Lose
+Important mechanics:
+- **Extract before remediation**. Use `memdump` to recover the AES key before running `kill`.
+- **Innocent kills are penalized**. Terminating non-malicious processes reduces your score.
+- **Exit is an abort command**. Use `exit` to leave the session and return to the menu after confirmation.
+
+### Step 5 — Win or Lose
 - **WIN:** Extract the AES key from the malicious process's memory, then terminate it.
 - **PARTIAL LOSS:** Kill the ransomware but forget to extract the key first — files are unrecoverable
 - **LOSS:** Time runs out or encryption reaches 100%
@@ -69,7 +79,7 @@ Use forensic commands to analyze the system. The **HUD bar** at the top shows:
 | `clear` | Clear the terminal screen |
 | `mute` | Toggle sound effects on/off |
 | `report` | View your forensic report (after game ends) |
-| `exit` | Exit from the game |
+| `exit` | Exit the investigation and return to the menu after confirmation |
 
 ---
 

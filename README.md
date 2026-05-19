@@ -10,16 +10,23 @@ V.O.I.D. is a browser-based **Live Incident Response simulator** built entirely 
 
 The machine cannot be shut down — critical decryption keys exist **only in volatile memory** (RAM). The player must race against the clock, using forensic analysis tools to identify the malicious process, extract the AES encryption key from its memory, and terminate the ransomware before all corporate data is encrypted.
 
-## Objective and Live Response
+## Gameplay Flow
 
-Your objective is to identify the ransomware process, extract the AES key from memory, and stop the encryption before data loss. This is a live incident response simulation, so the server stays online while time and encryption continue to advance. Volatile evidence disappears the moment you terminate the malware, so capture memory first.
+The game follows a structured, pedagogical sequence designed to introduce concepts before time pressure begins.
+
+1. **Interactive Tutorial Overlay**. On a first visit, the player receives a guided tutorial that explains the terminal interface and the learning panel.
+2. **Terminal Mission Briefing**. The briefing prints directly into the CLI with the operational context and objectives.
+3. **Timer Activation**. The countdown starts only after the player confirms readiness by pressing Enter at the mission prompt.
+4. **Live Investigation**. The player performs memory forensics actions while encryption progresses in real time.
+5. **Post Game Sequence**. The end of the session is ordered as follows: transparent cyberpunk Game Over screen, knowledge assessment quiz, and final forensic report.
 
 ### Key Features
-- **Dual OS Scenarios** — Choose between a Linux (Ubuntu Server) or Windows (Windows Server 2019) investigation, each with a completely different attack chain
-- **Real-Time Pressure** — A countdown timer and live encryption progress create authentic incident response stress
-- **Dynamic State Engine** — Process trees, network connections, and memory regions are mutable. Killing a process permanently removes it and its data from the system
-- **Forensic Report & Scoring** — At game end, a detailed investigation report evaluates methodology, penalizes mistakes, and provides educational feedback
-- **Order of Volatility as Core Mechanic** — Killing the ransomware before extracting the key means the key is lost forever
+- **Dual OS Scenarios** - Choose between a Linux (Ubuntu Server) or Windows (Windows Server 2019) investigation, each with a distinct attack chain
+- **Guided Onboarding** - A first run tutorial clarifies interface elements before the briefing starts
+- **Terminal Native Briefing** - The mission context is delivered through the CLI to maintain immersion
+- **Controlled Time Start** - The timer begins only after explicit analyst confirmation
+- **Structured Post Game Assessment** - A Game Over screen, quiz, and report deliver feedback in a fixed order
+- **Order of Volatility as Core Mechanic** - Terminating the ransomware before extracting the key causes irreversible data loss
 
 ## 🎯 Learning Outcomes
 

@@ -129,6 +129,8 @@ async function launchGame(scenarioOverride = null) {
   document.getElementById('start-menu').classList.add('hidden');
   document.getElementById('results-page').classList.add('hidden');
   document.getElementById('game-view').classList.remove('hidden');
+  const footer = document.getElementById('menu-footer');
+  if (footer) footer.classList.add('hidden');
 
   // Prompt & HUD
   const serverName = scenario.meta.target.toLowerCase();
@@ -191,6 +193,8 @@ function returnToMenu(force = false) {
   document.getElementById('game-view').classList.add('hidden');
   document.getElementById('results-page').classList.add('hidden');
   document.getElementById('start-menu').classList.remove('hidden');
+  const footer = document.getElementById('menu-footer');
+  if (footer) footer.classList.remove('hidden');
   document.querySelectorAll('.lesson-toast, .toast-backdrop, .report-backdrop, .report-modal, .tutorial-backdrop, .tutorial-modal').forEach(t => t.remove());
   const gameOver = document.getElementById('game-over-screen');
   if (gameOver) {
