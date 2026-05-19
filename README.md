@@ -82,4 +82,4 @@ VOID-Forensics-Game/
 
 ---
 
-*Educational project by Andrea Botticella (s347291) — Politecnico di Torino, 2024/2025.*
+*Educational project by Andrea Botticella (s347291) — Politecnico di Torino, 2025/2026.*

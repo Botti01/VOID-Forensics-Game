@@ -4,12 +4,15 @@
 
 V.O.I.D. runs entirely in your browser — no installation needed.
 
-### Option 1: Simple (just open the file)
+### Option 1: Play on GitHub pages
+[VOID GAME](https://botti01.github.io/VOID-Forensics-Game/)
+
+### Option 2: Simple (just open the file)
 1. Navigate to the project folder
 2. Double-click `index.html` — it opens in your default browser
 3. That's it!
 
-### Option 2: Local Server (recommended for development)
+### Option 3: Local Server (recommended for development)
 ```bash
 cd VOID-Forensics-Game
 python3 -m http.server 8080
@@ -23,7 +26,7 @@ Then open [http://localhost:8080](http://localhost:8080) in your browser.
 ### Step 1 — Start Menu
 When the game loads, you'll see the V.O.I.D. start screen:
 1. **Enter your name** (analyst callsign) in the text field
-2. **Select the target OS** — Linux (Ubuntu Server) or Windows (Windows Server 2019). Each has a completely different attack scenario.
+2. **Select the target OS** — Linux (Ubuntu Server) or Windows (Windows Server 2019).
 3. Click **"BEGIN INVESTIGATION"** (or press Enter)
 
 ### Step 2 — Read the Briefing
@@ -66,6 +69,7 @@ Use forensic commands to analyze the system. The **HUD bar** at the top shows:
 | `clear` | Clear the terminal screen |
 | `mute` | Toggle sound effects on/off |
 | `report` | View your forensic report (after game ends) |
+| `exit` | Exit from the game |
 
 ---
 
